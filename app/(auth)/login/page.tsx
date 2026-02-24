@@ -1,15 +1,37 @@
-import type { Metadata } from "next";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { FormInput } from "@/components/FormInput";
+"use client";
 
-export const metadata: Metadata = {
-    title: "Login — Velo",
-    description: "Sign in to your Velo account",
-};
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardFooter,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
+import { FormInput } from "@/components/FormInput";
+import { useAuthStore } from "@/store/authStore";
 
 export default function LoginPage() {
+    const router = useRouter();
+    const login = useAuthStore((state) => state.login);
+    const [isLoading, setIsLoading] = useState(false);
+
+    function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+        e.preventDefault();
+        setIsLoading(true);
+
+        // Mocked: simulates a 1-second network call then stores a dummy token
+        setTimeout(() => {
+            login("mock-jwt-token-login");
+            router.push("/dashboard");
+        }, 1000);
+    }
+
     return (
         <Card className="w-full max-w-sm border-border bg-card shadow-xl overflow-hidden">
             <CardHeader className="space-y-1 text-center pb-6">
@@ -25,50 +47,76 @@ export default function LoginPage() {
                             strokeWidth="2"
                             strokeLinecap="round"
                             strokeLinejoin="round"
-                        className="text-primary"
+                            className="text-primary"
                         >
                             <polyline points="16 18 22 12 16 6" />
                             <polyline points="8 6 2 12 8 18" />
                         </svg>
                     </div>
                 </div>
-                <CardTitle className="text-2xl font-bold tracking-tight">Welcome back</CardTitle>
+                <CardTitle className="text-2xl font-bold tracking-tight">
+                    Welcome back
+                </CardTitle>
                 <CardDescription>
-                    Enter your credentials to access your workspace.
+                    Enter your credentials to access your workspace
                 </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-                <FormInput
-                    label="Email"
-                    type="email"
-                    placeholder="name@example.com"
-                    required
-                />
-                <div className="space-y-1">
+
+            <form onSubmit={handleSubmit}>
+                <CardContent className="space-y-4">
                     <FormInput
-                        label="Password"
-                        type="password"
-                        placeholder="••••••••"
+                        label="Email"
+                        id="email"
+                        type="email"
+                        placeholder="name@example.com"
                         required
                     />
-                    <div className="flex justify-end">
-                        <Button variant="link" size="sm" className="px-0 h-auto text-xs text-muted-foreground hover:text-primary" asChild>
-                            <Link href="#">Forgot password?</Link>
-                        </Button>
+                    <div className="space-y-1">
+                        <FormInput
+                            label="Password"
+                            id="password"
+                            type="password"
+                            placeholder="••••••••"
+                            required
+                        />
+                        <div className="flex justify-end">
+                            <Button
+                                variant="link"
+                                size="sm"
+                                type="button"
+                                className="px-0 h-auto text-xs text-muted-foreground hover:text-primary"
+                                asChild
+                            >
+                                <Link href="#">Forgot password?</Link>
+                            </Button>
+                        </div>
                     </div>
-                </div>
-            </CardContent>
-            <CardFooter className="flex flex-col space-y-4">
-                <Button className="w-full">
-                    Sign In
-                </Button>
-                <div className="text-center text-sm text-muted-foreground">
-                    Don&apos;t have an account?{" "}
-                    <Button variant="link" size="sm" className="px-0 h-auto font-semibold" asChild>
-                        <Link href="/register">Sign up</Link>
+                </CardContent>
+                <CardFooter className="flex flex-col space-y-4">
+                    <Button className="w-full" type="submit" disabled={isLoading}>
+                        {isLoading ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Signing in…
+                            </>
+                        ) : (
+                            "Sign In"
+                        )}
                     </Button>
-                </div>
-            </CardFooter>
+                    <p className="text-center text-sm text-muted-foreground">
+                        Don&apos;t have an account?{" "}
+                        <Button
+                            variant="link"
+                            size="sm"
+                            type="button"
+                            className="px-0 h-auto font-semibold"
+                            asChild
+                        >
+                            <Link href="/register">Sign up</Link>
+                        </Button>
+                    </p>
+                </CardFooter>
+            </form>
         </Card>
     );
 }
