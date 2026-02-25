@@ -1,8 +1,11 @@
+"use client";
+
 import { Clock, Code2, FolderOpen, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LANGUAGE_COLOURS } from "@/lib/mockData";
 import type { Project } from "@/types/project";
+import { useRouter } from "next/router";
 
 interface ProjectCardProps {
     project: Project;
@@ -20,6 +23,7 @@ function timeAgo(isoDate: string): string {
 }
 
 export function ProjectCard({ project, onDelete }: ProjectCardProps) {
+    const router = useRouter();
     const langColour = LANGUAGE_COLOURS[project.language];
 
     return (
@@ -67,6 +71,7 @@ export function ProjectCard({ project, onDelete }: ProjectCardProps) {
                     <Button
                         size="sm"
                         className="h-8 gap-1.5 px-3 text-xs"
+                        onClick={() => router.push(`/project/${project.id}`)}
                     >
                         <FolderOpen className="h-3.5 w-3.5" />
                         Open
