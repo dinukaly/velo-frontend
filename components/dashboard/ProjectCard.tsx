@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LANGUAGE_COLOURS } from "@/lib/mockData";
 import type { Project } from "@/types/project";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation";
 
 interface ProjectCardProps {
     project: Project;
