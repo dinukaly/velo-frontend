@@ -102,6 +102,17 @@ function deleteNode(tree: FileNode[], id: string): FileNode[] {
         );
 }
 
+function findNode(tree: FileNode[], id: string): FileNode | null {
+    for (const n of tree) {
+        if (n.id === id) return n;
+        if (n.children) {
+            const found = findNode(n.children, id);
+            if (found) return found;
+        }
+    }
+    return null;
+}
+
 function genId(): string {
     return `node-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 }
@@ -401,9 +412,11 @@ function TreeNode({ node, depth }: { node: FileNode; depth: number }) {
 interface IdeSidebarProps {
     project: Project;
     open: boolean;
+    /** Callback when user clicks file node. opens it in editor tab */
+    onFileOpen?: (node: FileNode) => void;
 }
 
-export function IdeSidebar({ project, open }: IdeSidebarProps) {
+export function IdeSidebar({ project, open, onFileOpen }: IdeSidebarProps) {
     const [tree, setTree] = useState<FileNode[]>(INITIAL_TREE);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [expandedIds, setExpandedIds] = useState<Set<string>>(
@@ -428,7 +441,11 @@ export function IdeSidebar({ project, open }: IdeSidebarProps) {
         deleteConfirmId,
         creatingIn,
 
-        onSelect: (id) => setSelectedId(id),
+         onSelect: (id) => {
+            setSelectedId(id);
+            const node = findNode(tree, id);
+            if (node && node.type === "file") onFileOpen?.(node);
+        },
 
         onToggleExpand: (id) =>
             setExpandedIds((prev) => {
