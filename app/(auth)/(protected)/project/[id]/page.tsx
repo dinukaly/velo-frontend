@@ -99,7 +99,11 @@ export default function ProjectPage() {
             {/* ---- Workspace ------------------- */}
             <div className="flex flex-1 overflow-hidden">
                 {/* Sidebar */}
-                <IdeSidebar project={project} open={sidebarOpen} />
+                <IdeSidebar 
+                project={project}
+                open={sidebarOpen}
+                onFileOpen={handleFileOpen}
+                 />
 
                 {/* Editor + Terminal column */}
                 <div className="flex flex-1 flex-col overflow-hidden">
