@@ -15,21 +15,35 @@ import {
 } from "@/components/ui/card";
 import { FormInput } from "@/components/FormInput";
 import { useAuthStore } from "@/store/authStore";
+import { loginUser } from "@/services/authService";
 
 export default function LoginPage() {
     const router = useRouter();
     const login = useAuthStore((state) => state.login);
     const [isLoading, setIsLoading] = useState(false);
+     const [error, setError] = useState<string | null>(null);
 
-    function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
         setIsLoading(true);
 
-        // Mocked: simulates a 1-second network call then stores a dummy token
-        setTimeout(() => {
-            login("mock-jwt-token-login");
+        setError(null);
+        const form = e.currentTarget;
+        const email = (form.elements.namedItem("email") as HTMLInputElement).value;
+        const password = (form.elements.namedItem("password") as HTMLInputElement).value;
+        try {
+           const{token} = await loginUser({email,password});
+           login(token);
             router.push("/dashboard");
-        }, 1000);
+        } catch (err:unknown) {
+           const axiosErr = err as { response?: { data?: { message?: string } } };
+            setError(
+                axiosErr?.response?.data?.message ??
+                "Invalid credentials. Please try again."
+            );
+        } finally {
+            setIsLoading(false);
+        }
     }
 
     return (
@@ -91,6 +105,12 @@ export default function LoginPage() {
                             </Button>
                         </div>
                     </div>
+                     {/* Error message */}
+                    {error && (
+                        <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                            {error}
+                        </p>
+                    )}
                 </CardContent>
                 <CardFooter className="flex flex-col space-y-4">
                     <Button className="w-full" type="submit" disabled={isLoading}>
