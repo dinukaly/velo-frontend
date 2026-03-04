@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { LogOut, Search, LayoutGrid, List, FolderOpen } from "lucide-react";
+import { LogOut, Search, LayoutGrid, List, FolderOpen, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/authStore";
 import { MOCK_PROJECTS } from "@/lib/mockData";
@@ -10,17 +10,37 @@ import { ProjectCard } from "@/components/dashboard/ProjectCard";
 import { CreateProjectModal } from "@/components/dashboard/CreateProjectModal";
 import { DeleteProjectModal } from "@/components/dashboard/DeleteProjectModal";
 import type { Project } from "@/types/project";
+import { createProject, CreateProjectPayload, fetchProjects } from "@/services/projectService";
 
 export default function DashboardPage() {
     const router = useRouter();
     const logout = useAuthStore((state) => state.logout);
 
     // ---- State -----------------------
-    const [projects, setProjects] = useState<Project[]>(MOCK_PROJECTS);
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [search, setSearch] = useState("");
     const [view, setView] = useState<"grid" | "list">("grid");
     const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
     const [deleteOpen, setDeleteOpen] = useState(false);
+
+     // ─── Load projects from backend (fallback to mock data) ────────────────────
+    const loadProjects = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const data = await fetchProjects();
+            setProjects(data);
+        } catch {
+            // Backend not available — fall back to mock data so the UI stays usable
+            console.warn("[Dashboard] Backend unavailable, using mock data.");
+            setProjects(MOCK_PROJECTS);
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+    useEffect(() => {
+        loadProjects();
+    }, [loadProjects]);
 
     // ---- Derived -----------------------
     const filtered = projects.filter(
@@ -36,17 +56,21 @@ export default function DashboardPage() {
         router.replace("/login");
     }
 
-    function handleCreateProject(
-        data: Omit<Project, "id" | "createdAt" | "updatedAt">
-    ) {
-        const now = new Date().toISOString();
-        const newProject: Project = {
-            id: `proj-${Date.now()}`,
-            createdAt: now,
-            updatedAt: now,
-            ...data,
-        };
-        setProjects((prev) => [newProject, ...prev]);
+   async function handleCreateProject(data: CreateProjectPayload) {
+        try {
+            const created = await createProject(data);
+            setProjects((prev) => [created, ...prev]);
+        } catch {
+            // Optimistic local fallback when backend is unavailable
+            const now = new Date().toISOString();
+            const newProject: Project = {
+                id: `proj-${Date.now()}`,
+                createdAt: now,
+                updatedAt: now,
+                ...data,
+            };
+            setProjects((prev) => [newProject, ...prev]);
+        }
     }
 
     function handleDeleteClick(project: Project) {
@@ -142,8 +166,12 @@ export default function DashboardPage() {
                     <CreateProjectModal onConfirm={handleCreateProject} />
                 </div>
 
-                {/* Project grid / list */}
-                {filtered.length === 0 ? (
+                 {/* Loading state */}
+                {isLoading ? (
+                    <div className="flex items-center justify-center py-20">
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                ) : filtered.length === 0 ? (
                     <EmptyState
                         hasSearch={search.length > 0}
                         onClearSearch={() => setSearch("")}
