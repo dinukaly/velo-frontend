@@ -12,7 +12,10 @@ export function FormInput({ label, error, className, ...props }: FormInputProps)
         <div className="space-y-2 w-full">
             <Label
                 htmlFor={props.id || props.name}
-                className={cn(error && "text-destructive")}
+                className={cn(
+                    error && "text-destructive",
+                    props.required && "after:content-['*'] after:ml-0.5 after:text-destructive"
+                )}
             >
                 {label}
             </Label>

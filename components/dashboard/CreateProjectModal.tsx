@@ -39,7 +39,7 @@ export function CreateProjectModal({ onConfirm }: CreateProjectModalProps) {
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        if (!name.trim()) return;
+        if (!name.trim() || !description.trim()) return;
         onConfirm({ name: name.trim(), description: description.trim(), language });
         // Reset
         setName("");
@@ -47,6 +47,8 @@ export function CreateProjectModal({ onConfirm }: CreateProjectModalProps) {
         setLanguage("TypeScript");
         setOpen(false);
     }
+
+    const isFormValid = name.trim() !== "" && description.trim() !== "";
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -61,7 +63,7 @@ export function CreateProjectModal({ onConfirm }: CreateProjectModalProps) {
                 <DialogHeader>
                     <DialogTitle>Create new project</DialogTitle>
                     <DialogDescription>
-                        Give your project a name and choose a primary language to get started.
+                        Give your project a name, description, and choose a primary language to get started.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -77,22 +79,28 @@ export function CreateProjectModal({ onConfirm }: CreateProjectModalProps) {
                     />
 
                     <div className="space-y-2">
-                        <Label htmlFor="description">Description</Label>
+                        <Label htmlFor="description" className="after:content-['*'] after:ml-0.5 after:text-destructive">
+                            Description
+                        </Label>
                         <textarea
                             id="description"
                             placeholder="A short description of what this project does…"
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
                             rows={3}
+                            required
                             className="w-full resize-none rounded-md border border-border bg-background/50 px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 transition-shadow"
                         />
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="language">Language</Label>
+                        <Label htmlFor="language" className="after:content-['*'] after:ml-0.5 after:text-destructive">
+                            Language
+                        </Label>
                         <select
                             id="language"
                             value={language}
+                            required
                             onChange={(e) => setLanguage(e.target.value as ProjectLanguage)}
                             className="w-full rounded-md border border-border bg-background/50 px-3 py-2 text-sm outline-none ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 transition-shadow"
                         >
@@ -109,7 +117,7 @@ export function CreateProjectModal({ onConfirm }: CreateProjectModalProps) {
                     <Button variant="ghost" type="button" onClick={() => setOpen(false)}>
                         Cancel
                     </Button>
-                    <Button type="submit" form="create-project-form">
+                    <Button type="submit" form="create-project-form" disabled={!isFormValid}>
                         Create Project
                     </Button>
                 </DialogFooter>
