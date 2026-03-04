@@ -29,7 +29,7 @@ export function DeleteProjectModal({
 
     function handleConfirm() {
         onConfirm(project!.id);
-        onOpenChange(true);
+        onOpenChange(false);
     }
 
     return (
