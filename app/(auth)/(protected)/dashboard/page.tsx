@@ -10,7 +10,7 @@ import { ProjectCard } from "@/components/dashboard/ProjectCard";
 import { CreateProjectModal } from "@/components/dashboard/CreateProjectModal";
 import { DeleteProjectModal } from "@/components/dashboard/DeleteProjectModal";
 import type { Project } from "@/types/project";
-import { createProject, CreateProjectPayload, fetchProjects } from "@/services/projectService";
+import { createProject, CreateProjectPayload, fetchProjects, deleteProject } from "@/services/projectService";
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -24,7 +24,7 @@ export default function DashboardPage() {
     const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
     const [deleteOpen, setDeleteOpen] = useState(false);
 
-     // ─── Load projects from backend (fallback to mock data) ────────────────────
+    // ─── Load projects from backend (fallback to mock data) ────────────────────
     const loadProjects = useCallback(async () => {
         setIsLoading(true);
         try {
@@ -56,7 +56,7 @@ export default function DashboardPage() {
         router.replace("/login");
     }
 
-   async function handleCreateProject(data: CreateProjectPayload) {
+    async function handleCreateProject(data: CreateProjectPayload) {
         try {
             const created = await createProject(data);
             setProjects((prev) => [created, ...prev]);
@@ -78,8 +78,13 @@ export default function DashboardPage() {
         setDeleteOpen(true);
     }
 
-    function handleDeleteConfirm(id: string) {
-        setProjects((prev) => prev.filter((p) => p.id !== id));
+    async function handleDeleteConfirm(id: string) {
+        try {
+            await deleteProject(id);
+            setProjects((prev) => prev.filter((p) => p.id !== id));
+        } catch (error) {
+            console.error("Failed to delete project:", error);
+        }
     }
 
     return (
@@ -166,7 +171,7 @@ export default function DashboardPage() {
                     <CreateProjectModal onConfirm={handleCreateProject} />
                 </div>
 
-                 {/* Loading state */}
+                {/* Loading state */}
                 {isLoading ? (
                     <div className="flex items-center justify-center py-20">
                         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
