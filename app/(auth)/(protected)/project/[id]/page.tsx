@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { MOCK_PROJECTS } from "@/lib/mockData";
@@ -12,14 +12,16 @@ import { IdeTerminalArea } from "@/components/ide/IdeTerminalArea";
 import { Button } from "@/components/ui/button";
 import type { FileNode } from "@/types/fileTree";
 import type { FileTab } from "@/types/fileTab";
+import { Project } from "@/types/project";
+import { fetchProjectById } from "@/services/projectService";
 
 export default function ProjectPage() {
     const params = useParams();
     const router = useRouter();
     const projectId = params.id as string;
 
-    // Resolve project from mock data
-    const project = MOCK_PROJECTS.find((p) => p.id === projectId) ?? null;
+    const [project, setProject] = useState<Project | null>(null);
+    const [projectLoading, setProjectLoading] = useState(true);
 
     // ----layout state----------
     const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -28,6 +30,26 @@ export default function ProjectPage() {
     // --- tab state ------------
     const [openTabs, setOpenTabs] = useState<FileTab[]>([]);
     const [activeTabId, setActiveTabId] = useState<string | null>(null);
+
+    const [isSaving, setIsSaving] = useState(false);
+
+    // load the project from backend
+     useEffect(() => {
+        async function load() {
+            setProjectLoading(true);
+            try {
+                const data = await fetchProjectById(projectId);
+                setProject(data);
+            } catch {
+                // Backend not available — fall back to mock
+                const mock = MOCK_PROJECTS.find((p) => p.id === projectId) ?? null;
+                setProject(mock);
+            } finally {
+                setProjectLoading(false);
+            }
+        }
+        load();
+    }, [projectId]);
 
     // -------- Tab handlers -------------------
 
