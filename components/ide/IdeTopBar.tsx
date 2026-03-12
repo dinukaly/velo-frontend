@@ -8,6 +8,7 @@ import {
     Terminal,
     Save,
     Settings,
+    Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -21,6 +22,12 @@ interface IdeTopBarProps {
     onToggleSidebar: () => void;
     terminalOpen: boolean;
     onToggleTerminal: () => void;
+    /** Called when the user clicks Save */
+    onSave: () => void;
+    /** True while the save request is in-flight */
+    isSaving: boolean;
+    /** True if any open tab has unsaved changes */
+    hasUnsavedChanges: boolean;
 }
 
 export function IdeTopBar({
@@ -29,6 +36,9 @@ export function IdeTopBar({
     onToggleSidebar,
     terminalOpen,
     onToggleTerminal,
+    onSave,
+    isSaving,
+    hasUnsavedChanges,
 }: IdeTopBarProps) {
     const router = useRouter();
     const langColour = LANGUAGE_COLOURS[project.language];
@@ -89,15 +99,25 @@ export function IdeTopBar({
 
             {/* Right-side actions */}
             <div className="flex items-center gap-1 ml-auto">
-                {/* Save (placeholder) */}
+                {/* Save */}
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                    title="Save (coming soon)"
-                    disabled
+                    className="h-7 w-7 text-muted-foreground hover:text-foreground relative"
+                    title={isSaving ? "Saving…" : hasUnsavedChanges ? "Save (unsaved changes)" : "Save"}
+                    onClick={onSave}
+                    disabled={isSaving || !hasUnsavedChanges}
                 >
-                    <Save className="h-4 w-4" />
+                    {isSaving ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                        <>
+                            <Save className="h-4 w-4" />
+                            {hasUnsavedChanges && (
+                                <span className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-primary" />
+                            )}
+                        </>
+                    )}
                 </Button>
 
                 {/* Terminal toggle */}
