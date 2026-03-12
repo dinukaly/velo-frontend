@@ -2,11 +2,13 @@
 
 import React, {
     createContext,
+    useCallback,
     useContext,
     useEffect,
     useRef,
     useState,
 } from "react";
+import { fetchFileTree } from "@/services/fileService";
 import {
     ChevronDown,
     ChevronRight,
@@ -412,11 +414,13 @@ function TreeNode({ node, depth }: { node: FileNode; depth: number }) {
 interface IdeSidebarProps {
     project: Project;
     open: boolean;
-    /** Callback when user clicks file node. opens it in editor tab */
+    /** The project ID used to fetch the file tree from the backend. */
+    projectId: string;
+    /** Called when the user clicks a file node. Opens it in an editor tab. */
     onFileOpen?: (node: FileNode) => void;
 }
 
-export function IdeSidebar({ project, open, onFileOpen }: IdeSidebarProps) {
+export function IdeSidebar({ project, open, onFileOpen, projectId }: IdeSidebarProps) {
     const [tree, setTree] = useState<FileNode[]>(INITIAL_TREE);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [expandedIds, setExpandedIds] = useState<Set<string>>(
@@ -425,6 +429,22 @@ export function IdeSidebar({ project, open, onFileOpen }: IdeSidebarProps) {
     const [renamingId, setRenamingId] = useState<string | null>(null);
     const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
     const [creatingIn, setCreatingIn] = useState<CreatingIn | null>(null);
+
+    // ── Load file tree from backend, fallback to mock ─────────────────────────
+    const loadTree = useCallback(async () => {
+        try {
+            const data = await fetchFileTree(projectId);
+            if (data && data.length > 0) {
+                setTree(data);
+            }
+        } catch {
+            // Backend not available — keep INITIAL_TREE
+        }
+    }, [projectId]);
+
+    useEffect(() => {
+        loadTree();
+    }, [loadTree]);
 
     if (!open) return null;
 
@@ -441,7 +461,7 @@ export function IdeSidebar({ project, open, onFileOpen }: IdeSidebarProps) {
         deleteConfirmId,
         creatingIn,
 
-         onSelect: (id) => {
+        onSelect: (id) => {
             setSelectedId(id);
             const node = findNode(tree, id);
             if (node && node.type === "file") onFileOpen?.(node);
