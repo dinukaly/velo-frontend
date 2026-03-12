@@ -1,16 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { LogOut, Search, LayoutGrid, List, FolderOpen, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/authStore";
 import { MOCK_PROJECTS } from "@/lib/mockData";
+import { fetchProjects, createProject, deleteProject } from "@/services/projectService";
+import type { CreateProjectPayload } from "@/services/projectService";
 import { ProjectCard } from "@/components/dashboard/ProjectCard";
 import { CreateProjectModal } from "@/components/dashboard/CreateProjectModal";
 import { DeleteProjectModal } from "@/components/dashboard/DeleteProjectModal";
 import type { Project } from "@/types/project";
-import { createProject, CreateProjectPayload, fetchProjects, deleteProject } from "@/services/projectService";
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -38,6 +39,7 @@ export default function DashboardPage() {
             setIsLoading(false);
         }
     }, []);
+
     useEffect(() => {
         loadProjects();
     }, [loadProjects]);
@@ -79,11 +81,13 @@ export default function DashboardPage() {
     }
 
     async function handleDeleteConfirm(id: string) {
+        // Optimistic UI — remove immediately, rollback on error
+        setProjects((prev) => prev.filter((p) => p.id !== id));
         try {
             await deleteProject(id);
-            setProjects((prev) => prev.filter((p) => p.id !== id));
-        } catch (error) {
-            console.error("Failed to delete project:", error);
+        } catch {
+            // If the backend call fails, reload so the UI reflects true server state
+            await loadProjects();
         }
     }
 
@@ -127,7 +131,9 @@ export default function DashboardPage() {
                 <div className="flex flex-col gap-1">
                     <h1 className="text-2xl font-bold tracking-tight">Projects</h1>
                     <p className="text-sm text-muted-foreground">
-                        {projects.length} project{projects.length !== 1 ? "s" : ""} in your workspace
+                        {isLoading
+                            ? "Loading your workspace…"
+                            : `${projects.length} project${projects.length !== 1 ? "s" : ""} in your workspace`}
                     </p>
                 </div>
 
