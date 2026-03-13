@@ -8,7 +8,14 @@ import React, {
     useRef,
     useState,
 } from "react";
-import { fetchFileTree } from "@/services/fileService";
+import {
+    fetchFileTree,
+    createFile,
+    createFolder,
+    deleteNode as apiDeleteNode,
+    renameNode as apiRenameNode,
+} from "@/services/fileService";
+import type { FileNode } from "@/types/fileTree";
 import {
     ChevronDown,
     ChevronRight,
@@ -24,7 +31,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Project } from "@/types/project";
-import type { FileNode } from "@/types/fileTree";
+
 
 // Mock file tree removed
 
@@ -393,15 +400,23 @@ export function IdeSidebar({ project, open, onFileOpen, projectId }: IdeSidebarP
     const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
     const [creatingIn, setCreatingIn] = useState<CreatingIn | null>(null);
 
-    // ── Load file tree from backend, fallback to mock ─────────────────────────
+    //Normalize backend uppercase FILE/FOLDER enum to lowercase 
+    function normalizeTree(nodes: FileNode[]): FileNode[] {
+        return nodes.map((n) => ({
+            ...n,
+            type: (n.type as string).toLowerCase() as "file" | "folder",
+            children: n.children ? normalizeTree(n.children) : undefined,
+        }));
+    }
+
+    //Load file tree from backend 
     const loadTree = useCallback(async () => {
         try {
             const data = await fetchFileTree(projectId);
             if (data && data.length > 0) {
-                setTree(data);
+                setTree(normalizeTree(data));
             }
         } catch {
-            // Backend not available
             console.error("[IDE] Failed to load file tree");
         }
     }, [projectId]);
@@ -442,9 +457,15 @@ export function IdeSidebar({ project, open, onFileOpen, projectId }: IdeSidebarP
             clearTransientState();
             setRenamingId(id);
         },
-        onConfirmRename: (id, newName) => {
-            setTree((t) => renameNode(t, id, newName));
+        onConfirmRename: async (id, newName) => {
+            setTree((t) => renameNode(t, id, newName)); // optimistic update
             setRenamingId(null);
+            try {
+                await apiRenameNode(id, newName);
+            } catch (err) {
+                console.error("[IDE] Rename failed, reloading tree:", err);
+                loadTree(); // rollback by reloading from backend
+            }
         },
         onCancelRename: () => setRenamingId(null),
 
@@ -452,10 +473,16 @@ export function IdeSidebar({ project, open, onFileOpen, projectId }: IdeSidebarP
             clearTransientState();
             setDeleteConfirmId(id);
         },
-        onDeleteConfirm: (id) => {
-            setTree((t) => deleteNode(t, id));
+        onDeleteConfirm: async (id) => {
+            setTree((t) => deleteNode(t, id)); // optimistic update
             if (selectedId === id) setSelectedId(null);
             setDeleteConfirmId(null);
+            try {
+                await apiDeleteNode(id);
+            } catch (err) {
+                console.error("[IDE] Delete failed, reloading tree:", err);
+                loadTree(); // rollback by reloading from backend
+            }
         },
         onDeleteCancel: () => setDeleteConfirmId(null),
 
@@ -467,19 +494,57 @@ export function IdeSidebar({ project, open, onFileOpen, projectId }: IdeSidebarP
             }
             setCreatingIn({ parentId, type });
         },
-        onConfirmCreate: (name) => {
+        onConfirmCreate: async (name) => {
             if (!name.trim() || !creatingIn) {
                 setCreatingIn(null);
                 return;
             }
-            const node: FileNode = {
-                id: genId(),
+
+            const targetParentId = creatingIn.parentId;
+            const targetType = creatingIn.type;
+
+            // Optimistic placeholder with a temp id
+            const tempId = genId();
+            const tempNode: FileNode = {
+                id: tempId,
                 name: name.trim(),
-                type: creatingIn.type,
-                ...(creatingIn.type === "folder" ? { children: [] } : {}),
+                type: targetType,
+                ...(targetType === "folder" ? { children: [] } : {}),
             };
-            setTree((t) => addNode(t, creatingIn.parentId, node));
+
+            setTree((t) => addNode(t, targetParentId, tempNode));
             setCreatingIn(null);
+
+            try {
+                const payload = {
+                    projectId,
+                    parentId: targetParentId,
+                    name: name.trim(),
+                };
+                const created =
+                    targetType === "folder"
+                        ? await createFolder(payload)
+                        : await createFile(payload);
+
+                if (!created || !created.id) {
+                    throw new Error("Backend response missing valid id");
+                }
+
+                // Replace temp node with the real one from backend (has real UUID)
+                setTree((t) => {
+                    const without = deleteNode(t, tempId);
+                    const real: FileNode = {
+                        id: created.id,
+                        name: created.name,
+                        type: (created.type as string).toLowerCase() as "file" | "folder",
+                        ...(created.type === "FOLDER" ? { children: [] } : {}),
+                    };
+                    return addNode(without, targetParentId, real);
+                });
+            } catch (err) {
+                console.error("[IDE] Create failed, reloading tree:", err);
+                loadTree(); // rollback
+            }
         },
         onCancelCreate: () => setCreatingIn(null),
     };

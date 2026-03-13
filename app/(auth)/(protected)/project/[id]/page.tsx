@@ -146,15 +146,15 @@ export default function ProjectPage() {
             await saveFileContent(projectId, activeTabId, {
                 content: activeTab.content,
             });
-            // Mark tab as clean
+            // Mark tab as clean on success
             setOpenTabs((prev) =>
                 prev.map((t) =>
                     t.id === activeTabId ? { ...t, isDirty: false } : t
                 )
             );
-        } catch {
+        } catch (err) {
             // Save failed — keep dirty state so the user can retry
-            console.error("[IDE] Failed to save file:", activeTabId);
+            console.error("[IDE] Failed to save file:", activeTabId, err);
         } finally {
             setIsSaving(false);
         }
