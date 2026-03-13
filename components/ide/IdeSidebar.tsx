@@ -26,44 +26,7 @@ import { cn } from "@/lib/utils";
 import type { Project } from "@/types/project";
 import type { FileNode } from "@/types/fileTree";
 
-// ---------- Initial mock file tree ---------------
-
-const INITIAL_TREE: FileNode[] = [
-    {
-        id: "src",
-        name: "src",
-        type: "folder",
-        children: [
-            { id: "src-index", name: "index.ts", type: "file" },
-            { id: "src-app", name: "app.ts", type: "file" },
-            {
-                id: "src-utils",
-                name: "utils",
-                type: "folder",
-                children: [
-                    { id: "src-utils-helpers", name: "helpers.ts", type: "file" },
-                    { id: "src-utils-logger", name: "logger.ts", type: "file" },
-                ],
-            },
-            {
-                id: "src-types",
-                name: "types",
-                type: "folder",
-                children: [{ id: "src-types-index", name: "index.d.ts", type: "file" }],
-            },
-        ],
-    },
-    {
-        id: "tests",
-        name: "tests",
-        type: "folder",
-        children: [{ id: "tests-app", name: "app.test.ts", type: "file" }],
-    },
-    { id: "pkg", name: "package.json", type: "file" },
-    { id: "tsconfig", name: "tsconfig.json", type: "file" },
-    { id: "env", name: ".env", type: "file" },
-    { id: "readme", name: "README.md", type: "file" },
-];
+// Mock file tree removed
 
 // --------------- Pure immutable tree utilities -------------------
 
@@ -421,7 +384,7 @@ interface IdeSidebarProps {
 }
 
 export function IdeSidebar({ project, open, onFileOpen, projectId }: IdeSidebarProps) {
-    const [tree, setTree] = useState<FileNode[]>(INITIAL_TREE);
+    const [tree, setTree] = useState<FileNode[]>([]);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [expandedIds, setExpandedIds] = useState<Set<string>>(
         new Set(["src"])
@@ -438,7 +401,8 @@ export function IdeSidebar({ project, open, onFileOpen, projectId }: IdeSidebarP
                 setTree(data);
             }
         } catch {
-            // Backend not available — keep INITIAL_TREE
+            // Backend not available
+            console.error("[IDE] Failed to load file tree");
         }
     }, [projectId]);
 
