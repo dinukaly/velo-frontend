@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { MOCK_PROJECTS } from "@/lib/mockData";
 import { MOCK_FILE_CONTENT, inferLanguage } from "@/lib/mockFileContent";
 import { fetchProjectById } from "@/services/projectService";
+import { openEnvironment } from "@/services/environmentService";
 import { loadFileContent, saveFileContent } from "@/services/fileService";
 import { IdeTopBar } from "@/components/ide/IdeTopBar";
 import { IdeSidebar } from "@/components/ide/IdeSidebar";
@@ -34,19 +35,36 @@ export default function ProjectPage() {
 
     const [isSaving, setIsSaving] = useState(false);
 
+    // Guard to ensure we only call openEnvironment once per session (prevents React 18 double-firing)
+    const hasOpenedEnv = useRef(false);
+
     // load the project from backend
     useEffect(() => {
         async function load() {
             setProjectLoading(true);
             try {
+                // 1. Fetch metadata
                 const data = await fetchProjectById(projectId);
                 setProject(data);
-            } catch {
+            } catch (err) {
+                console.error("[IDE] Failed to load project metadata:", err);
                 // Backend not available — fall back to mock
                 const mock = MOCK_PROJECTS.find((p) => p.id === projectId) ?? null;
                 setProject(mock);
             } finally {
                 setProjectLoading(false);
+            }
+
+            // 2. Initialize environment (once only)
+            if (!hasOpenedEnv.current) {
+                hasOpenedEnv.current = true;
+                try {
+                    // Do not await this blocking the UI, let it run in background
+                    // Or await it but catch errors separately so it doesn't crash the project load.
+                    await openEnvironment(projectId);
+                } catch (envErr) {
+                    console.error("[IDE] Failed to open environment (it might already be open):", envErr);
+                }
             }
         }
         load();
