@@ -41,7 +41,7 @@ export async function deleteProject(id: string): Promise<void> {
  *
  * Returns a single project by ID.
  */
-export async function fetchProjectById(id: string): Promise<Project> {
-    const response = await api.get<Project>(`/projects/${id}`);
+export async function fetchProjectById(projectId: string): Promise<Project> {
+    const response = await api.get<Project>(`/projects/${projectId}`);
     return response.data;
 }
