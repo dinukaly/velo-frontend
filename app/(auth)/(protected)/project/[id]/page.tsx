@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { MOCK_PROJECTS } from "@/lib/mockData";
-import { MOCK_FILE_CONTENT, inferLanguage } from "@/lib/mockFileContent";
 import { fetchProjectById } from "@/services/projectService";
 import { openEnvironment } from "@/services/environmentService";
 import { loadFileContent, saveFileContent } from "@/services/fileService";
@@ -16,6 +15,21 @@ import { Button } from "@/components/ui/button";
 import type { FileNode } from "@/types/fileTree";
 import type { FileTab } from "@/types/fileTab";
 import type { Project } from "@/types/project";
+
+function inferLanguage(filename: string): string {
+    const ext = filename.split(".").pop()?.toLowerCase();
+    switch (ext) {
+        case "ts": case "tsx": return "typescript";
+        case "js": case "jsx": return "javascript";
+        case "py": return "python";
+        case "java": return "java";
+        case "json": return "json";
+        case "md": return "markdown";
+        case "html": return "html";
+        case "css": return "css";
+        default: return "plaintext";
+    }
+}
 
 export default function ProjectPage() {
     const params = useParams();
@@ -59,8 +73,6 @@ export default function ProjectPage() {
             if (!hasOpenedEnv.current) {
                 hasOpenedEnv.current = true;
                 try {
-                    // Do not await this blocking the UI, let it run in background
-                    // Or await it but catch errors separately so it doesn't crash the project load.
                     await openEnvironment(projectId);
                 } catch (envErr) {
                     console.error("[IDE] Failed to open environment (it might already be open):", envErr);
@@ -80,12 +92,13 @@ export default function ProjectPage() {
             return;
         }
 
-        // Try to load real content from backend; fall back to mock content
+        // Try to load real content from backend
         let content: string;
         try {
             content = await loadFileContent(projectId, node.id);
-        } catch {
-            content = MOCK_FILE_CONTENT[node.id] ?? `// ${node.name}\n`;
+        } catch (err) {
+            console.error("[IDE] Could not load file content", err);
+            content = `// Error: Failed to load content for ${node.name}\n`;
         }
 
         const newTab: FileTab = {
