@@ -499,26 +499,37 @@ export function IdeSidebar({ project, open, onFileOpen, projectId }: IdeSidebarP
                 setCreatingIn(null);
                 return;
             }
+
+            const targetParentId = creatingIn.parentId;
+            const targetType = creatingIn.type;
+
             // Optimistic placeholder with a temp id
             const tempId = genId();
             const tempNode: FileNode = {
                 id: tempId,
                 name: name.trim(),
-                type: creatingIn.type,
-                ...(creatingIn.type === "folder" ? { children: [] } : {}),
+                type: targetType,
+                ...(targetType === "folder" ? { children: [] } : {}),
             };
-            setTree((t) => addNode(t, creatingIn.parentId, tempNode));
+
+            setTree((t) => addNode(t, targetParentId, tempNode));
             setCreatingIn(null);
+
             try {
                 const payload = {
                     projectId,
-                    parentId: creatingIn.parentId,
+                    parentId: targetParentId,
                     name: name.trim(),
                 };
                 const created =
-                    creatingIn.type === "folder"
+                    targetType === "folder"
                         ? await createFolder(payload)
                         : await createFile(payload);
+
+                if (!created || !created.id) {
+                    throw new Error("Backend response missing valid id");
+                }
+
                 // Replace temp node with the real one from backend (has real UUID)
                 setTree((t) => {
                     const without = deleteNode(t, tempId);
@@ -528,7 +539,7 @@ export function IdeSidebar({ project, open, onFileOpen, projectId }: IdeSidebarP
                         type: (created.type as string).toLowerCase() as "file" | "folder",
                         ...(created.type === "FOLDER" ? { children: [] } : {}),
                     };
-                    return addNode(without, creatingIn.parentId, real);
+                    return addNode(without, targetParentId, real);
                 });
             } catch (err) {
                 console.error("[IDE] Create failed, reloading tree:", err);
