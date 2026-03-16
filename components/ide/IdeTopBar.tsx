@@ -15,6 +15,26 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { LANGUAGE_COLOURS } from "@/lib/mockData";
 import type { Project } from "@/types/project";
+import { useTerminalStore, type TerminalConnectionStatus } from "@/store/terminalStore";
+import { cn } from "@/lib/utils";
+
+const STATUS_DOT_CLASSES: Record<TerminalConnectionStatus, string> = {
+    idle: "bg-muted-foreground/30",
+    connecting: "bg-yellow-400 animate-pulse",
+    connected: "bg-green-400",
+    reconnecting: "bg-yellow-400 animate-pulse",
+    disconnected: "bg-red-500",
+    mock: "bg-blue-400",
+};
+
+const STATUS_TITLES: Record<TerminalConnectionStatus, string> = {
+    idle: "Terminal",
+    connecting: "Terminal — connecting…",
+    connected: "Terminal — connected to backend",
+    reconnecting: "Terminal — reconnecting…",
+    disconnected: "Terminal — disconnected",
+    mock: "Terminal — mock shell",
+};
 
 interface IdeTopBarProps {
     project: Project;
@@ -42,6 +62,7 @@ export function IdeTopBar({
 }: IdeTopBarProps) {
     const router = useRouter();
     const langColour = LANGUAGE_COLOURS[project.language];
+    const terminalStatus = useTerminalStore((s) => s.status);
 
     return (
         <header className="flex h-11 shrink-0 items-center gap-1 border-b border-border bg-card/80 px-2 backdrop-blur-sm">
@@ -124,11 +145,17 @@ export function IdeTopBar({
                 <Button
                     variant={terminalOpen ? "secondary" : "ghost"}
                     size="icon"
-                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                    className="h-7 w-7 text-muted-foreground hover:text-foreground relative"
                     onClick={onToggleTerminal}
-                    title={terminalOpen ? "Hide terminal" : "Show terminal"}
+                    title={STATUS_TITLES[terminalStatus]}
                 >
                     <Terminal className="h-4 w-4" />
+                    <span
+                        className={cn(
+                            "absolute bottom-0.5 right-0.5 h-1.5 w-1.5 rounded-full",
+                            STATUS_DOT_CLASSES[terminalStatus]
+                        )}
+                    />
                 </Button>
 
                 <Separator orientation="vertical" className="mx-1 h-5" />
