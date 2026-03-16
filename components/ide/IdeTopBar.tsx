@@ -24,7 +24,6 @@ const STATUS_DOT_CLASSES: Record<TerminalConnectionStatus, string> = {
     connected: "bg-green-400",
     reconnecting: "bg-yellow-400 animate-pulse",
     disconnected: "bg-red-500",
-    mock: "bg-blue-400",
 };
 
 const STATUS_TITLES: Record<TerminalConnectionStatus, string> = {
@@ -33,7 +32,6 @@ const STATUS_TITLES: Record<TerminalConnectionStatus, string> = {
     connected: "Terminal — connected to backend",
     reconnecting: "Terminal — reconnecting…",
     disconnected: "Terminal — disconnected",
-    mock: "Terminal — mock shell",
 };
 
 interface IdeTopBarProps {

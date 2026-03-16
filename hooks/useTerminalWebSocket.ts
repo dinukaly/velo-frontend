@@ -30,8 +30,7 @@ export interface UseTerminalWebSocketOptions {
      */
     onConnected: (sendData: (data: string) => void) => void;
     /**
-     * Called when the connection is permanently lost so the component can
-     * fall back to or restore mock mode.
+     * Called when the connection is permanently lost.
      */
     onDisconnected: () => void;
 }
@@ -53,8 +52,9 @@ export interface UseTerminalWebSocketOptions {
  *  - Publishes connection status to `useTerminalStore` for global visibility.
  *  - Gracefully tears down all resources (WS, timers, listeners) on unmount.
  *
+ *
  * When the backend returns an error on the first connection attempt, the hook
- * signals `onDisconnected` so the component can activate its mock shell.
+ * signals `onDisconnected` so the component can shut down connectivity logic.
  */
 export function useTerminalWebSocket({
     term,
@@ -179,7 +179,7 @@ export function useTerminalWebSocket({
             // We only log on the first attempt to avoid duplicate error messages.
             if (attemptsRef.current === 0) {
                 writeStatus(
-                    "[WebSocket error — falling back to mock shell]",
+                    "[WebSocket error]",
                     "red"
                 );
             }
@@ -205,7 +205,7 @@ export function useTerminalWebSocket({
             if (attempt >= MAX_RECONNECT_ATTEMPTS) {
                 setStatus("disconnected");
                 writeStatus(
-                    `[Could not reconnect after ${MAX_RECONNECT_ATTEMPTS} attempts — switching to mock shell]`,
+                    `[Could not reconnect after ${MAX_RECONNECT_ATTEMPTS} attempts]`,
                     "red"
                 );
                 onDisconnected();

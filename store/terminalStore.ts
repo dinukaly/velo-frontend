@@ -8,8 +8,7 @@ export type TerminalConnectionStatus =
     | "connecting"     // WebSocket is being opened
     | "connected"      // WS open and healthy
     | "reconnecting"   // Connection dropped — scheduled for retry
-    | "disconnected"   // Permanently closed / max retries exceeded
-    | "mock";          // Running local mock shell (no backend)
+    | "disconnected";  // Permanently closed / max retries exceeded
 
 interface TerminalState {
     /** Current WebSocket connection status for the active project. */
