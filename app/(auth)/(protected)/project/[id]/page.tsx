@@ -37,7 +37,9 @@ export default function ProjectPage() {
     const projectId = params.id as string;
 
     const [project, setProject] = useState<Project | null>(null);
+    // ---- loading state ----------
     const [projectLoading, setProjectLoading] = useState(true);
+    const [loadingStep, setLoadingStep] = useState<string>("Initializing workspace...");
 
     // ----layout state----------
     const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -58,25 +60,33 @@ export default function ProjectPage() {
             setProjectLoading(true);
             try {
                 // 1. Fetch metadata
+                setLoadingStep("Fetching project metadata...");
                 const data = await fetchProjectById(projectId);
                 setProject(data);
+
+                // 2. Initialize environment (once only)
+                if (!hasOpenedEnv.current) {
+                    hasOpenedEnv.current = true;
+                    setLoadingStep("Preparing your secure container...");
+                    // This might take several seconds as the backend pulls images/starts containers
+                    await openEnvironment(projectId);
+                }
+
+                setLoadingStep("Workspace ready!");
             } catch (err) {
                 console.error("[IDE] Failed to load project metadata:", err);
                 // Backend not available — fall back to mock
                 const mock = MOCK_PROJECTS.find((p) => p.id === projectId) ?? null;
                 setProject(mock);
-            } finally {
-                setProjectLoading(false);
-            }
 
-            // 2. Initialize environment (once only)
-            if (!hasOpenedEnv.current) {
-                hasOpenedEnv.current = true;
-                try {
-                    await openEnvironment(projectId);
-                } catch (envErr) {
-                    console.error("[IDE] Failed to open environment (it might already be open):", envErr);
+                if (!mock) {
+                    setLoadingStep("Failed to load project.");
                 }
+            } finally {
+                // Brief delay so the user can see the "Ready" message
+                setTimeout(() => {
+                    setProjectLoading(false);
+                }, 500);
             }
         }
         load();
@@ -163,8 +173,23 @@ export default function ProjectPage() {
     //  Loading state 
     if (projectLoading) {
         return (
-            <div className="flex h-screen items-center justify-center bg-background">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-muted border-t-primary" />
+            <div className="flex h-screen flex-col items-center justify-center bg-background gap-6">
+                <div className="relative">
+                    <div className="h-12 w-12 animate-spin rounded-full border-4 border-muted border-t-primary" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                    </div>
+                </div>
+
+                <div className="flex flex-col items-center gap-2 max-w-xs text-center">
+                    <h3 className="text-lg font-semibold tracking-tight">Setting up Velo</h3>
+                    <p className="text-sm text-muted-foreground animate-in fade-in slide-in-from-bottom-1 duration-500">
+                        {loadingStep}
+                    </p>
+                    <div className="w-48 h-1.5 bg-muted rounded-full overflow-hidden mt-4">
+                        <div className="h-full bg-primary/40 animate-progress-indeterminate" />
+                    </div>
+                </div>
             </div>
         );
     }
