@@ -16,6 +16,7 @@ import {
 import { FormInput } from "@/components/FormInput";
 import { useAuthStore } from "@/store/authStore";
 import { registerUser } from "@/services/authService";
+import { toast } from "sonner";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -37,13 +38,13 @@ export default function RegisterPage() {
     try {
       const { token } = await registerUser({ name, email, password });
       login(token);
+      toast.success("Account created successfully!");
       router.push("/dashboard");
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };
-      setError(
-        axiosErr?.response?.data?.message ??
-          "Registration failed. Please try again.",
-      );
+      const errorMsg = axiosErr?.response?.data?.message ?? "Registration failed. Please try again.";
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setIsLoading(false);
     }

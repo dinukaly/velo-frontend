@@ -12,6 +12,7 @@ import { ProjectCard } from "@/components/dashboard/ProjectCard";
 import { CreateProjectModal } from "@/components/dashboard/CreateProjectModal";
 import { DeleteProjectModal } from "@/components/dashboard/DeleteProjectModal";
 import type { Project } from "@/types/project";
+import { toast } from "sonner";
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -35,6 +36,7 @@ export default function DashboardPage() {
             // Backend not available — fall back to mock data so the UI stays usable
             console.warn("[Dashboard] Backend unavailable, using mock data.");
             setProjects(MOCK_PROJECTS);
+            toast.warning("Backend unavailable, using mock data.");
         } finally {
             setIsLoading(false);
         }
@@ -62,6 +64,7 @@ export default function DashboardPage() {
         try {
             const created = await createProject(data);
             setProjects((prev) => [created, ...prev]);
+            toast.success("Project created successfully");
         } catch {
             // Optimistic local fallback when backend is unavailable
             const now = new Date().toISOString();
@@ -72,6 +75,7 @@ export default function DashboardPage() {
                 ...data,
             };
             setProjects((prev) => [newProject, ...prev]);
+            toast.success("Project created locally (offline mode)");
         }
     }
 
@@ -85,9 +89,11 @@ export default function DashboardPage() {
         setProjects((prev) => prev.filter((p) => p.id !== id));
         try {
             await deleteProject(id);
+            toast.success("Project deleted successfully");
         } catch {
             // If the backend call fails, reload so the UI reflects true server state
             await loadProjects();
+            toast.error("Failed to delete project");
         }
     }
 

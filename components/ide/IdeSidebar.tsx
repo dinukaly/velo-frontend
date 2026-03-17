@@ -31,6 +31,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Project } from "@/types/project";
+import { toast } from "sonner";
 
 
 // --------------- Pure immutable tree utilities -------------------
@@ -412,6 +413,7 @@ export function IdeSidebar({ project, open, onFileOpen, projectId }: IdeSidebarP
             }
         } catch {
             console.error("[IDE] Failed to load file tree");
+            toast.error("Failed to load file tree");
         }
     }, [projectId]);
 
@@ -456,8 +458,10 @@ export function IdeSidebar({ project, open, onFileOpen, projectId }: IdeSidebarP
             setRenamingId(null);
             try {
                 await apiRenameNode(id, newName);
+                toast.success("Renamed successfully");
             } catch (err) {
                 console.error("[IDE] Rename failed, reloading tree:", err);
+                toast.error("Rename failed");
                 loadTree(); // rollback by reloading from backend
             }
         },
@@ -473,8 +477,10 @@ export function IdeSidebar({ project, open, onFileOpen, projectId }: IdeSidebarP
             setDeleteConfirmId(null);
             try {
                 await apiDeleteNode(id);
+                toast.success("Deleted successfully");
             } catch (err) {
                 console.error("[IDE] Delete failed, reloading tree:", err);
+                toast.error("Delete failed");
                 loadTree(); // rollback by reloading from backend
             }
         },
@@ -523,8 +529,10 @@ export function IdeSidebar({ project, open, onFileOpen, projectId }: IdeSidebarP
                     };
                     return addNode(t, targetParentId, real);
                 });
+                toast.success("Created successfully");
             } catch (err) {
                 console.error("[IDE] Create failed, reloading tree:", err);
+                toast.error("Create failed");
                 loadTree(); // rollback
             }
         },

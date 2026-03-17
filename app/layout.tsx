@@ -17,6 +17,8 @@ export const metadata: Metadata = {
   description: "A production-grade browser-based integrated development environment",
 };
 
+import { Toaster } from "@/components/ui/sonner";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -28,6 +30,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} bg-background text-foreground min-h-screen`}
       >
         {children}
+        <Toaster />
       </body>
     </html>
   );

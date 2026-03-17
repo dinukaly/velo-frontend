@@ -16,31 +16,33 @@ import {
 import { FormInput } from "@/components/FormInput";
 import { useAuthStore } from "@/store/authStore";
 import { loginUser } from "@/services/authService";
+import { toast } from "sonner";
 
 export default function LoginPage() {
     const router = useRouter();
     const login = useAuthStore((state) => state.login);
     const [isLoading, setIsLoading] = useState(false);
-     const [error, setError] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
         setIsLoading(true);
-
         setError(null);
+
         const form = e.currentTarget;
         const email = (form.elements.namedItem("email") as HTMLInputElement).value;
         const password = (form.elements.namedItem("password") as HTMLInputElement).value;
+
         try {
-           const{token} = await loginUser({email,password});
-           login(token);
+            const { token } = await loginUser({ email, password });
+            login(token);
+            toast.success("Welcome back!");
             router.push("/dashboard");
-        } catch (err:unknown) {
-           const axiosErr = err as { response?: { data?: { message?: string } } };
-            setError(
-                axiosErr?.response?.data?.message ??
-                "Invalid credentials. Please try again."
-            );
+        } catch (err: unknown) {
+            const axiosErr = err as { response?: { data?: { message?: string } } };
+            const errorMsg = axiosErr?.response?.data?.message ?? "Invalid credentials. Please try again.";
+            setError(errorMsg);
+            toast.error(errorMsg);
         } finally {
             setIsLoading(false);
         }
@@ -105,7 +107,8 @@ export default function LoginPage() {
                             </Button>
                         </div>
                     </div>
-                     {/* Error message */}
+
+                    {/* Error message */}
                     {error && (
                         <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
                             {error}

@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import type { FileNode } from "@/types/fileTree";
 import type { FileTab } from "@/types/fileTab";
 import type { Project } from "@/types/project";
+import { toast } from "sonner";
 
 function inferLanguage(filename: string): string {
     const ext = filename.split(".").pop()?.toLowerCase();
@@ -81,6 +82,9 @@ export default function ProjectPage() {
 
                 if (!mock) {
                     setLoadingStep("Failed to load project.");
+                    toast.error("Failed to load project.");
+                } else {
+                    toast.warning("Backend unavailable, using mock data.");
                 }
             } finally {
                 // Brief delay so the user can see the "Ready" message
@@ -109,6 +113,7 @@ export default function ProjectPage() {
         } catch (err) {
             console.error("[IDE] Could not load file content", err);
             content = `// Error: Failed to load content for ${node.name}\n`;
+            toast.error(`Failed to load content for ${node.name}`);
         }
 
         const newTab: FileTab = {
@@ -162,9 +167,11 @@ export default function ProjectPage() {
                     t.id === activeTabId ? { ...t, isDirty: false } : t
                 )
             );
+            toast.success("File saved successfully");
         } catch (err) {
             // Save failed — keep dirty state so the user can retry
             console.error("[IDE] Failed to save file:", activeTabId, err);
+            toast.error("Failed to save file.");
         } finally {
             setIsSaving(false);
         }
