@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { LogOut, Search, LayoutGrid, List, FolderOpen, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/authStore";
-import { MOCK_PROJECTS } from "@/lib/mockData";
 import { fetchProjects, createProject, deleteProject } from "@/services/projectService";
 import type { CreateProjectPayload } from "@/services/projectService";
 import { ProjectCard } from "@/components/dashboard/ProjectCard";
@@ -26,17 +25,15 @@ export default function DashboardPage() {
     const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
     const [deleteOpen, setDeleteOpen] = useState(false);
 
-    // ─── Load projects from backend (fallback to mock data) ────────────────────
+    // ─── Load projects from backend ────────────────────
     const loadProjects = useCallback(async () => {
         setIsLoading(true);
         try {
             const data = await fetchProjects();
             setProjects(data);
         } catch {
-            // Backend not available — fall back to mock data so the UI stays usable
-            console.warn("[Dashboard] Backend unavailable, using mock data.");
-            setProjects(MOCK_PROJECTS);
-            toast.warning("Backend unavailable, using mock data.");
+            console.error("[Dashboard] Failed to load projects.");
+            toast.error("Failed to load projects.");
         } finally {
             setIsLoading(false);
         }
@@ -66,16 +63,7 @@ export default function DashboardPage() {
             setProjects((prev) => [created, ...prev]);
             toast.success("Project created successfully");
         } catch {
-            // Optimistic local fallback when backend is unavailable
-            const now = new Date().toISOString();
-            const newProject: Project = {
-                id: `proj-${Date.now()}`,
-                createdAt: now,
-                updatedAt: now,
-                ...data,
-            };
-            setProjects((prev) => [newProject, ...prev]);
-            toast.success("Project created locally (offline mode)");
+            toast.error("Failed to create project");
         }
     }
 

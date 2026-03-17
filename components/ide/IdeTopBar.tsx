@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { LANGUAGE_COLOURS } from "@/lib/mockData";
+import { LANGUAGE_COLOURS } from "@/lib/constants";
 import type { Project } from "@/types/project";
 import { useTerminalStore, type TerminalConnectionStatus } from "@/store/terminalStore";
 import { cn } from "@/lib/utils";

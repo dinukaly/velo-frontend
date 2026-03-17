@@ -3,7 +3,7 @@
 import { Clock, Code2, FolderOpen, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { LANGUAGE_COLOURS } from "@/lib/mockData";
+import { LANGUAGE_COLOURS } from "@/lib/constants";
 import type { Project } from "@/types/project";
 import { useRouter } from "next/navigation";
 

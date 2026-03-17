@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { MOCK_PROJECTS } from "@/lib/mockData";
 import { fetchProjectById } from "@/services/projectService";
 import { openEnvironment } from "@/services/environmentService";
 import { loadFileContent, saveFileContent } from "@/services/fileService";
@@ -76,16 +75,8 @@ export default function ProjectPage() {
                 setLoadingStep("Workspace ready!");
             } catch (err) {
                 console.error("[IDE] Failed to load project metadata:", err);
-                // Backend not available — fall back to mock
-                const mock = MOCK_PROJECTS.find((p) => p.id === projectId) ?? null;
-                setProject(mock);
-
-                if (!mock) {
-                    setLoadingStep("Failed to load project.");
-                    toast.error("Failed to load project.");
-                } else {
-                    toast.warning("Backend unavailable, using mock data.");
-                }
+                setLoadingStep("Failed to load project.");
+                toast.error("Failed to load project.");
             } finally {
                 // Brief delay so the user can see the "Ready" message
                 setTimeout(() => {

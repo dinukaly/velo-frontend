@@ -389,7 +389,7 @@ export function IdeSidebar({ project, open, onFileOpen, projectId }: IdeSidebarP
     const [tree, setTree] = useState<FileNode[]>([]);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [expandedIds, setExpandedIds] = useState<Set<string>>(
-        new Set(["src"])
+        new Set()
     );
     const [renamingId, setRenamingId] = useState<string | null>(null);
     const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);

@@ -93,8 +93,6 @@ export function IdeTerminalArea({ projectId }: IdeTerminalAreaProps) {
     const fitAddonRef = useRef<FitAddon | null>(null);
     // Stable ref to the live sendData function provided by the hook.
     const sendDataRef = useRef<((data: string) => void) | null>(null);
-    // Whether the terminal is wired to the real backend (vs. local mock).
-    const [isLive, setIsLive] = useState(false);
 
     // Global store
     const status = useTerminalStore((s) => s.status);
@@ -153,13 +151,11 @@ export function IdeTerminalArea({ projectId }: IdeTerminalAreaProps) {
 
     // WebSocket callbacks
     const handleConnected = useCallback((sendFn: (data: string) => void) => {
-        setIsLive(true);
         sendDataRef.current = sendFn;
         setStatus("connected");
     }, [setStatus]);
 
     const handleDisconnected = useCallback(() => {
-        setIsLive(false);
         sendDataRef.current = null;
         setStatus("disconnected");
     }, [setStatus]);

@@ -26,7 +26,7 @@ export interface UseTerminalWebSocketOptions {
     projectId: string;
     /**
      * Called when the WS connection is established so the component can
-     * disable mock mode and wire up `term.onData → ws.send`.
+     * wire up `term.onData → ws.send`.
      */
     onConnected: (sendData: (data: string) => void) => void;
     /**
