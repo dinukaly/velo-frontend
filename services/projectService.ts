@@ -33,7 +33,7 @@ export async function createProject(payload: CreateProjectPayload): Promise<Proj
  * Deletes the project with the given ID.
  */
 export async function deleteProject(id: string): Promise<void> {
-    await api.delete(`/projects/${id}`);
+    await api.delete(`/projects/delete/${id}`);
 }
 
 /**
