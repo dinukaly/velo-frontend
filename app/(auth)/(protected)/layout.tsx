@@ -1,10 +1,8 @@
-import { AuthGuard } from "@/components/AuthGuard";
-
 /**
  * ProtectedLayout
  *
  * Wraps all routes that require authentication.
- * now AuthGuard handles redirection for unauthenticated users.
+ * now AuthContext handles redirection for unauthenticated users globally.
  */
 export default function ProtectedLayout({
     children,
@@ -12,10 +10,8 @@ export default function ProtectedLayout({
     children: React.ReactNode;
 }) {
     return (
-        <AuthGuard>
         <div className="flex min-h-screen flex-col bg-background">
             {children}
         </div>
-        </AuthGuard>
     );
 }
