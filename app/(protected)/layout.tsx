@@ -10,7 +10,7 @@ export default function ProtectedLayout({
     children: React.ReactNode;
 }) {
     return (
-        <div className="flex min-h-screen flex-col bg-background">
+        <div className="flex min-h-screen w-full flex-col bg-background">
             {children}
         </div>
     );

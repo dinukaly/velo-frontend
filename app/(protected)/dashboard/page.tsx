@@ -105,7 +105,7 @@ export default function DashboardPage() {
                         <polyline points="16 18 22 12 16 6" />
                         <polyline points="8 6 2 12 8 18" />
                     </svg>
-                    Browser IDE
+                    Velo
                 </div>
                 <Button
                     variant="ghost"
@@ -119,7 +119,7 @@ export default function DashboardPage() {
             </header>
 
             {/*------Main content-------------------*/}
-            <main className="flex-1 max-w-6xl w-full mx-auto px-6 py-8 space-y-6">
+            <main className="flex-1 w-full px-6 py-8 space-y-6">
 
                 {/* Page heading */}
                 <div className="flex flex-col gap-1">
@@ -185,7 +185,7 @@ export default function DashboardPage() {
                     <div
                         className={
                             view === "grid"
-                                ? "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                                ? "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
                                 : "flex flex-col gap-3"
                         }
                     >
