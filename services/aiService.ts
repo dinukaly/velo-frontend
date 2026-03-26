@@ -3,7 +3,8 @@ import api from "./api";
 export interface AIChatRequest {
   message: string;
   projectId: string;
-  currentFilePath: string;
+  fileId: string;
+  currentFilePath?: string;
   selectedCode?: string;
 }
 export interface AIChatResponse {
@@ -13,9 +14,9 @@ export interface AIChatResponse {
 export async function sendAIMessage(
   req: AIChatRequest
 ): Promise<AIChatResponse> {
-  const res = await api.post<{ status: number; message: string; data: AIChatResponse }>(
+  const res = await api.post<AIChatResponse>(
     "/ai/chat",
     req
   );
-  return res.data.data;
+  return res.data;
 }

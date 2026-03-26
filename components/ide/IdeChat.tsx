@@ -26,6 +26,7 @@ interface ChatMessage {
 }
 export interface IdeAiChatProps {
   projectId: string;
+  fileId: string | null;
   currentFilePath: string | null;
   selectedCode?: string;
   onClose: () => void;
@@ -153,6 +154,7 @@ function ThinkingBubble() {
 // Main Component
 export function IdeAiChat({
   projectId,
+  fileId,
   currentFilePath,
   selectedCode,
   onClose,
@@ -206,6 +208,7 @@ export function IdeAiChat({
       const res = await sendAIMessage({
         message: trimmed,
         projectId,
+        fileId: fileId ?? "unknown",
         currentFilePath: currentFilePath ?? "unknown",
         selectedCode: selectedCode ?? undefined,
       });
