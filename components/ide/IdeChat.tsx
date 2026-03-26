@@ -205,12 +205,19 @@ export function IdeAiChat({
       textareaRef.current.style.height = "auto";
     }
     try {
+      // Prepare history (skip initial greeting)
+      const chatHistory = messages.slice(1).map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+
       const res = await sendAIMessage({
         message: trimmed,
         projectId,
         fileId: fileId ?? "unknown",
         currentFilePath: currentFilePath ?? "unknown",
         selectedCode: selectedCode ?? undefined,
+        history: chatHistory,
       });
       const aiMsg: ChatMessage = {
         id: uid(),
