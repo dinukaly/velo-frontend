@@ -9,6 +9,7 @@ import {
     Save,
     Settings,
     Loader2,
+    Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -40,6 +41,9 @@ interface IdeTopBarProps {
     onToggleSidebar: () => void;
     terminalOpen: boolean;
     onToggleTerminal: () => void;
+    /** AI chat panel open state */
+    aiOpen: boolean;
+    onToggleAi: () => void;
     /** Called when the user clicks Save */
     onSave: () => void;
     /** True while the save request is in-flight */
@@ -54,6 +58,8 @@ export function IdeTopBar({
     onToggleSidebar,
     terminalOpen,
     onToggleTerminal,
+    aiOpen,
+    onToggleAi,
     onSave,
     isSaving,
     hasUnsavedChanges,
@@ -155,7 +161,24 @@ export function IdeTopBar({
                         )}
                     />
                 </Button>
-
+                       {/* AI Chat toggle */}
+                <Button
+                    variant={aiOpen ? "secondary" : "ghost"}
+                    size="icon"
+                    className={cn(
+                        "h-7 w-7 relative",
+                        aiOpen
+                            ? "text-violet-400 bg-violet-500/10 hover:bg-violet-500/20"
+                            : "text-muted-foreground hover:text-foreground"
+                    )}
+                    onClick={onToggleAi}
+                    title={aiOpen ? "Close AI chat" : "Open Velo AI"}
+                >
+                    <Sparkles className="h-4 w-4" />
+                    {aiOpen && (
+                        <span className="absolute bottom-0.5 right-0.5 h-1.5 w-1.5 rounded-full bg-violet-400 animate-pulse" />
+                    )}
+                </Button>
                 <Separator orientation="vertical" className="mx-1 h-5" />
 
                 {/* Settings (placeholder) */}

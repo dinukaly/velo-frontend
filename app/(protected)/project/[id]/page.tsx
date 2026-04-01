@@ -15,6 +15,7 @@ import type { FileNode } from "@/types/fileTree";
 import type { FileTab } from "@/types/fileTab";
 import type { Project } from "@/types/project";
 import { toast } from "sonner";
+import { IdeAiChat } from "@/components/ide/IdeChat";
 
 function inferLanguage(filename: string): string {
     const ext = filename.split(".").pop()?.toLowerCase();
@@ -44,6 +45,7 @@ export default function ProjectPage() {
     // ----layout state----------
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [terminalOpen, setTerminalOpen] = useState(true);
+    const [aiOpen, setAiOpen] = useState(false);
 
     // --- tab state ------------
     const [openTabs, setOpenTabs] = useState<FileTab[]>([]);
@@ -215,9 +217,12 @@ export default function ProjectPage() {
             <IdeTopBar
                 project={project}
                 sidebarOpen={sidebarOpen}
+                //functional props
                 onToggleSidebar={() => setSidebarOpen((v) => !v)}
                 terminalOpen={terminalOpen}
                 onToggleTerminal={() => setTerminalOpen((v) => !v)}
+                aiOpen={aiOpen}
+                onToggleAi={() => setAiOpen((v) => !v)}
                 onSave={handleSave}
                 isSaving={isSaving}
                 hasUnsavedChanges={openTabs.some((t) => t.isDirty)}
@@ -246,6 +251,19 @@ export default function ProjectPage() {
                         <IdeTerminalArea projectId={projectId} />
                     )}
                 </div>
+                 {/* AI Chat Panel */}
+                {aiOpen && (
+                    <div className="w-80 shrink-0 flex flex-col overflow-hidden">
+                        <IdeAiChat
+                            projectId={projectId}
+                            fileId={activeTabId}
+                            currentFilePath={
+                                openTabs.find((t) => t.id === activeTabId)?.name ?? null
+                            }
+                            onClose={() => setAiOpen(false)}
+                        />
+                    </div>
+                )}
             </div>
         </div>
     );
