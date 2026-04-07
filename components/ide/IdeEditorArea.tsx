@@ -107,6 +107,33 @@ function TabBar({ tabs, activeTabId, onTabSelect, onTabClose }: TabBarProps) {
     );
 }
 
+// ------------ Tab bar ----------
+
+const MONACO_OPTIONS: editor.IStandaloneEditorConstructionOptions = {
+    fontSize: 13,
+    fontFamily:
+        "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, Consolas, monospace",
+    fontLigatures: true,
+    lineHeight: 21,
+    letterSpacing: 0.3,
+    padding: { top: 14, bottom: 14 },
+    minimap: { enabled: true, scale: 1 },
+    scrollBeyondLastLine: false,
+    renderLineHighlight: "all",
+    cursorBlinking: "smooth",
+    cursorSmoothCaretAnimation: "on",
+    smoothScrolling: true,
+    tabSize: 2,
+    wordWrap: "on",
+    bracketPairColorization: { enabled: true },
+    guides: { bracketPairs: "active" },
+    mouseWheelZoom: true,
+    contextmenu: true,
+    formatOnPaste: true,
+    formatOnType: true,
+    automaticLayout: true,
+};
+
 // ------------ IdeEditorArea ----------
 
 interface IdeEditorAreaProps {
@@ -130,6 +157,8 @@ export function IdeEditorArea({
     const monacoRef = useRef<typeof import("monaco-editor") | null>(null);
     /** Stable ref that always holds the latest activeTabId for the change handler. */
     const activeTabIdRef = useRef<string | null>(activeTabId);
+    /** Debounce timer for content changes. */
+    const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const activeTab = openTabs.find((t) => t.id === activeTabId) ?? null;
 
@@ -181,7 +210,10 @@ export function IdeEditorArea({
         editor.onDidChangeModelContent(() => {
             const tabId = activeTabIdRef.current;
             if (tabId) {
-                onContentChange(tabId, editor.getValue());
+                if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+                typingTimeoutRef.current = setTimeout(() => {
+                    onContentChange(tabId, editor.getValue());
+                }, 300);
             }
         });
     };
@@ -234,30 +266,7 @@ export function IdeEditorArea({
                     theme="vs-dark"
                     defaultValue="// Loading…"
                     onMount={handleMount}
-                    options={{
-                        fontSize: 13,
-                        fontFamily:
-                            "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, Consolas, monospace",
-                        fontLigatures: true,
-                        lineHeight: 21,
-                        letterSpacing: 0.3,
-                        padding: { top: 14, bottom: 14 },
-                        minimap: { enabled: true, scale: 1 },
-                        scrollBeyondLastLine: false,
-                        renderLineHighlight: "all",
-                        cursorBlinking: "smooth",
-                        cursorSmoothCaretAnimation: "on",
-                        smoothScrolling: true,
-                        tabSize: 2,
-                        wordWrap: "on",
-                        bracketPairColorization: { enabled: true },
-                        guides: { bracketPairs: "active" },
-                        mouseWheelZoom: true,
-                        contextmenu: true,
-                        formatOnPaste: true,
-                        formatOnType: true,
-                        automaticLayout: true,
-                    }}
+                    options={MONACO_OPTIONS}
                 />
             </div>
         </div>
