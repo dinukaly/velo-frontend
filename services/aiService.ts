@@ -21,7 +21,7 @@ export async function sendAIMessage(
   req: AIChatRequest
 ): Promise<AIChatResponse> {
   const res = await api.post<AIChatResponse>(
-    "/ai/chat",
+    "/v1/ai/chat",
     req,
     { timeout: 60_000 } 
   );

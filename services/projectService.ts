@@ -13,7 +13,7 @@ export type CreateProjectPayload = Omit<Project, "id" | "createdAt" | "updatedAt
  * Returns all projects belonging to the authenticated user.
  */
 export async function fetchProjects(): Promise<Project[]> {
-    const response = await api.get<Project[]>("/projects/list");
+    const response = await api.get<Project[]>("/v1/projects/list");
     return response.data;
 }
 
@@ -23,7 +23,7 @@ export async function fetchProjects(): Promise<Project[]> {
  * Creates a new project and returns the created entity.
  */
 export async function createProject(payload: CreateProjectPayload): Promise<Project> {
-    const response = await api.post<Project>("/projects/create", payload);
+    const response = await api.post<Project>("/v1/projects/create", payload);
     return response.data;
 }
 
@@ -33,7 +33,7 @@ export async function createProject(payload: CreateProjectPayload): Promise<Proj
  * Deletes the project with the given ID.
  */
 export async function deleteProject(id: string): Promise<void> {
-    await api.delete(`/projects/delete/${id}`);
+    await api.delete(`/v1/projects/delete/${id}`);
 }
 
 /**
@@ -42,6 +42,6 @@ export async function deleteProject(id: string): Promise<void> {
  * Returns a single project by ID.
  */
 export async function fetchProjectById(projectId: string): Promise<Project> {
-    const response = await api.get<Project>(`/projects/${projectId}`);
+    const response = await api.get<Project>(`/v1/projects/${projectId}`);
     return response.data;
 }

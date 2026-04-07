@@ -19,7 +19,7 @@ function isApiResponse(body: unknown): body is APIResponse {
 }
 
 const api = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api/v1",
+    baseURL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api",
     headers: {
         "Content-Type": "application/json",
     },

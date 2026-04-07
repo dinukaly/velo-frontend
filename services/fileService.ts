@@ -1,129 +1,123 @@
 import api from "@/services/api";
 import type { FileNode } from "@/types/fileTree";
 
-//Request / Response Types 
+// Request / Response Types (v2 - Filesystem-First)
 
-/**
- * POST /api/v1/files/file  →  CreateFileRequestDTO
- */
 export interface CreateFileRequest {
     projectId: string;
-    parentId: string | null;
+    parentPath: string; // The parent directory path
     name: string;
 }
 
-/**
- * POST /api/v1/files/folder 
- */
 export interface CreateFolderRequest {
     projectId: string;
-    parentId: string | null;
+    parentPath: string; // The parent directory path
     name: string;
 }
 
-/**
- * PATCH /api/v1/files/{nodeId}/rename
- */
 export interface RenameRequest {
+    projectId: string;
+    path: string; // The current relative path
     newName: string;
 }
 
-/**
- * PUT /api/v1/files/content  
- */
 export interface WriteFileRequest {
-    nodeId: string;
+    projectId: string;
+    path: string;
     content: string;
 }
 
-/**
- * GET /api/v1/files/{nodeId}/content 
- */
 export interface FileContentResponse {
-    nodeId: string;
+    path: string;
     name: string;
     content: string;
 }
 
 /**
- * Response shape for create/rename operations.
+ * Response shape for V2 operations.
+ * Backend V2 typically returns the updated node or metadata.
  */
 export interface FileNodeResponse {
-    id: string;
+    path: string; // This is the relative path
     name: string;
-    type: "FILE" | "FOLDER"; 
+    type: "FILE" | "FOLDER";
     projectId: string;
-    parentId: string | null;
-    children: FileNodeResponse[];
-    createdAt: string;
-    updatedAt: string;
+    children?: FileNodeResponse[];
 }
 
-//File Service
+// File Service (v2)
 
 /**
- * GET /api/v1/files/tree/{projectId}
+ * GET /api/v2/files/tree/{projectId}?path=
+ * Lists one directory level (lazy loading).
  */
-export async function fetchFileTree(projectId: string): Promise<FileNode[]> {
-    const response = await api.get<FileNode[]>(`/files/tree/${projectId}`);
+export async function fetchFileTree(projectId: string, path: string = ""): Promise<FileNode[]> {
+    const response = await api.get<FileNode[]>(`/v2/files/tree/${projectId}`, {
+        params: { path }
+    });
     return response.data;
 }
 
 /**
- * GET /api/v1/files/{nodeId}/content
+ * GET /api/v2/files/content?projectId=&path=
  */
 export async function loadFileContent(
-    _projectId: string,   // kept for call-site compatibility
-    fileId: string
+    projectId: string,
+    path: string
 ): Promise<string> {
-    const response = await api.get<FileContentResponse>(`/files/${fileId}/content`);
+    const response = await api.get<FileContentResponse>(`/v2/files/content`, {
+        params: { projectId, path }
+    });
     return response.data.content;
 }
 
 /**
- * PUT /api/v1/files/content
+ * PUT /api/v2/files/content
  */
 export async function saveFileContent(
-    _projectId: string, 
-    fileId: string,
-    payload: { content: string }
+    projectId: string,
+    path: string,
+    content: string
 ): Promise<void> {
-    await api.put(`/files/content`, {
-        nodeId: fileId,
-        content: payload.content,
+    await api.put(`/v2/files/content`, {
+        projectId,
+        path,
+        content,
     });
 }
 
 /**
- * POST /api/v1/files/file
+ * POST /api/v2/files/file
  */
 export async function createFile(req: CreateFileRequest): Promise<FileNodeResponse> {
-    const response = await api.post<FileNodeResponse>(`/files/file`, req);
+    const response = await api.post<FileNodeResponse>(`/v2/files/file`, req);
     return response.data;
 }
 
 /**
- * POST /api/v1/files/folder
+ * POST /api/v2/files/folder
  */
 export async function createFolder(req: CreateFolderRequest): Promise<FileNodeResponse> {
-    const response = await api.post<FileNodeResponse>(`/files/folder`, req);
+    const response = await api.post<FileNodeResponse>(`/v2/files/folder`, req);
     return response.data;
 }
 
 /**
- * DELETE /api/v1/files/{nodeId}
- *
- * Response data: null
+ * DELETE /api/v2/files?projectId=&path=
  */
-export async function deleteNode(nodeId: string): Promise<void> {
-    await api.delete(`/files/${nodeId}`);
+export async function deleteNode(projectId: string, path: string): Promise<void> {
+    await api.delete(`/v2/files`, {
+        params: { projectId, path }
+    });
 }
 
 /**
- * PATCH /api/v1/files/{nodeId}/rename
+ * PUT /api/v2/files/rename
  */
-export async function renameNode(nodeId: string, newName: string): Promise<FileNodeResponse> {
-    const response = await api.patch<FileNodeResponse>(`/files/${nodeId}/rename`, {
+export async function renameNode(projectId: string, path: string, newName: string): Promise<FileNodeResponse> {
+    const response = await api.put<FileNodeResponse>(`/v2/files/rename`, {
+        projectId,
+        path,
         newName,
     });
     return response.data;
