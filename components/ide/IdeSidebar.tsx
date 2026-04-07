@@ -41,7 +41,7 @@ function addNode(
     parentId: string | null,
     node: FileNode
 ): FileNode[] {
-    if (parentId === null) return [...tree, node];
+    if (parentId === null || parentId === "") return [...tree, node];
     return tree.map((n) => {
         if (n.id === parentId) {
             return { ...n, children: [...(n.children ?? []), node] };
@@ -53,13 +53,33 @@ function addNode(
     });
 }
 
+function updateNodeChildren(
+    tree: FileNode[],
+    id: string,
+    children: FileNode[]
+): FileNode[] {
+    return tree.map((n) => {
+        if (n.id === id) return { ...n, children };
+        if (n.children) return { ...n, children: updateNodeChildren(n.children, id, children) };
+        return n;
+    });
+}
+
 function renameNode(
     tree: FileNode[],
     id: string,
     newName: string
 ): FileNode[] {
+    // In V2, renaming a node changes its ID (path)
+    // For simplicity in the UI, might just reload the tree or part of it
+    // But simple name update for immediate feedback
     return tree.map((n) => {
-        if (n.id === id) return { ...n, name: newName };
+        if (n.id === id) {
+            const parts = n.id.split("/");
+            parts[parts.length - 1] = newName;
+            const newId = parts.join("/");
+            return { ...n, name: newName, id: newId };
+        }
         if (n.children) return { ...n, children: renameNode(n.children, id, newName) };
         return n;
     });
@@ -82,6 +102,16 @@ function findNode(tree: FileNode[], id: string): FileNode | null {
         }
     }
     return null;
+}
+
+//Normalize backend uppercase FILE/FOLDER enum to lowercase 
+function normalizeTree(nodes: any[]): FileNode[] {
+    return nodes.map((n) => ({
+        id: n.path,
+        name: n.name,
+        type: (n.type as string).toLowerCase() as "file" | "folder",
+        children: n.children ? normalizeTree(n.children) : undefined,
+    }));
 }
 
 // --------- File extension → colour ------------
@@ -395,20 +425,11 @@ export function IdeSidebar({ project, open, onFileOpen, projectId }: IdeSidebarP
     const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
     const [creatingIn, setCreatingIn] = useState<CreatingIn | null>(null);
 
-    //Normalize backend uppercase FILE/FOLDER enum to lowercase 
-    function normalizeTree(nodes: FileNode[]): FileNode[] {
-        return nodes.map((n) => ({
-            ...n,
-            type: (n.type as string).toLowerCase() as "file" | "folder",
-            children: n.children ? normalizeTree(n.children) : undefined,
-        }));
-    }
-
     //Load file tree from backend 
     const loadTree = useCallback(async () => {
         try {
-            const data = await fetchFileTree(projectId);
-            if (data && data.length > 0) {
+            const data = await fetchFileTree(projectId, "");
+            if (data) {
                 setTree(normalizeTree(data));
             }
         } catch {
@@ -442,27 +463,48 @@ export function IdeSidebar({ project, open, onFileOpen, projectId }: IdeSidebarP
             if (node && node.type === "file") onFileOpen?.(node);
         },
 
-        onToggleExpand: (id) =>
+        onToggleExpand: async (id) => {
+            const isExpanding = !expandedIds.has(id);
             setExpandedIds((prev) => {
                 const next = new Set(prev);
-                next.has(id) ? next.delete(id) : next.add(id);
+                isExpanding ? next.add(id) : next.delete(id);
                 return next;
-            }),
+            });
+
+            if (isExpanding) {
+                const node = findNode(tree, id);
+                // If folder is expanding and children aren't loaded yet (lazy loading)
+                if (node && node.type === "folder" && (!node.children || node.children.length === 0)) {
+                    try {
+                        const children = await fetchFileTree(projectId, id);
+                        setTree(prevTree => updateNodeChildren(prevTree, id, normalizeTree(children)));
+                    } catch (err) {
+                        console.error("[IDE] Failed to lazy load folder:", id, err);
+                        toast.error("Failed to load folder contents");
+                    }
+                }
+            }
+        },
 
         onStartRename: (id) => {
             clearTransientState();
             setRenamingId(id);
         },
         onConfirmRename: async (id, newName) => {
-            setTree((t) => renameNode(t, id, newName)); // optimistic update
+            // Optimistic update
+            const oldTree = tree;
+            setTree((t) => renameNode(t, id, newName)); 
             setRenamingId(null);
             try {
-                await apiRenameNode(id, newName);
+                await apiRenameNode(projectId, id, newName);
                 toast.success("Renamed successfully");
+                // in V2, renaming changes the path, so probably reload the parent or the whole tree
+                // because child paths also change recursively. For now, just reload.
+                loadTree(); 
             } catch (err) {
-                console.error("[IDE] Rename failed, reloading tree:", err);
+                console.error("[IDE] Rename failed, rolling back:", err);
                 toast.error("Rename failed");
-                loadTree(); // rollback by reloading from backend
+                setTree(oldTree);
             }
         },
         onCancelRename: () => setRenamingId(null),
@@ -472,16 +514,17 @@ export function IdeSidebar({ project, open, onFileOpen, projectId }: IdeSidebarP
             setDeleteConfirmId(id);
         },
         onDeleteConfirm: async (id) => {
+            const oldTree = tree;
             setTree((t) => deleteNode(t, id)); // optimistic update
             if (selectedId === id) setSelectedId(null);
             setDeleteConfirmId(null);
             try {
-                await apiDeleteNode(id);
+                await apiDeleteNode(projectId, id);
                 toast.success("Deleted successfully");
             } catch (err) {
-                console.error("[IDE] Delete failed, reloading tree:", err);
+                console.error("[IDE] Delete failed, rolling back:", err);
                 toast.error("Delete failed");
-                loadTree(); // rollback by reloading from backend
+                setTree(oldTree);
             }
         },
         onDeleteCancel: () => setDeleteConfirmId(null),
@@ -508,7 +551,7 @@ export function IdeSidebar({ project, open, onFileOpen, projectId }: IdeSidebarP
             try {
                 const payload = {
                     projectId,
-                    parentId: targetParentId,
+                    parentPath: targetParentId ?? "",
                     name: name.trim(),
                 };
                 const created =
@@ -516,19 +559,19 @@ export function IdeSidebar({ project, open, onFileOpen, projectId }: IdeSidebarP
                         ? await createFolder(payload)
                         : await createFile(payload);
 
-                if (!created || !created.id) {
-                    throw new Error("Backend response missing valid id");
+                if (!created) {
+                    throw new Error("Backend response missing valid data");
                 }
 
-                setTree((t) => {
-                    const real: FileNode = {
-                        id: created.id,
-                        name: created.name,
-                        type: (created.type as string).toLowerCase() as "file" | "folder",
-                        ...(created.type === "FOLDER" ? { children: [] } : {}),
-                    };
-                    return addNode(t, targetParentId, real);
-                });
+                // since using path-based IDs now, the backend returns the new path as 'path
+                const newNode: FileNode = {
+                    id: created.path,
+                    name: created.name,
+                    type: (created.type as string).toLowerCase() as "file" | "folder",
+                    ...(created.type === "FOLDER" ? { children: [] } : {}),
+                };
+
+                setTree((t) => addNode(t, targetParentId, newNode));
                 toast.success("Created successfully");
             } catch (err) {
                 console.error("[IDE] Create failed, reloading tree:", err);
@@ -570,8 +613,8 @@ export function IdeSidebar({ project, open, onFileOpen, projectId }: IdeSidebarP
                             variant="ghost"
                             size="icon"
                             className="h-5 w-5 text-muted-foreground/60 hover:text-foreground"
-                            title="Refresh (coming soon)"
-                            disabled
+                            title="Refresh tree"
+                            onClick={loadTree}
                         >
                             <RefreshCw className="h-3 w-3" />
                         </Button>

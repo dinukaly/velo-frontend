@@ -151,9 +151,7 @@ export default function ProjectPage() {
 
         setIsSaving(true);
         try {
-            await saveFileContent(projectId, activeTabId, {
-                content: activeTab.content,
-            });
+            await saveFileContent(projectId, activeTabId, activeTab.content);
             // Mark tab as clean on success
             setOpenTabs((prev) =>
                 prev.map((t) =>
