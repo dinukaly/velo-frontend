@@ -9,7 +9,7 @@ import api from "@/services/api";
  * starts the sandbox container.
  */
 export async function openEnvironment(projectId: string): Promise<void> {
-    await api.post(`/v1/environment/open/${projectId}`);
+    await api.post(`/v1/environment/open/${projectId}`, {}, { timeout: 60_000 });
 }
 
 /*
