@@ -4,11 +4,12 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { Loader2 } from "lucide-react";
+import { UserResponse } from "@/services/authService";
 
 interface AuthContextType {
     isAuthenticated: boolean;
-    token: string | null;
-    login: (token: string) => void;
+    user: UserResponse | null;
+    login: (user: UserResponse) => void;
     logout: () => void;
 }
 
@@ -22,7 +23,7 @@ const DEFAULT_PROTECTED_REDIRECT = "/login";
 const DEFAULT_AUTH_REDIRECT = "/dashboard";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-    const { token, isAuthenticated, login, logout } = useAuthStore();
+    const { user, isAuthenticated, login, logout } = useAuthStore();
     const [isHydrated, setIsHydrated] = useState(false);
     const router = useRouter();
     const pathname = usePathname();
@@ -107,7 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     return (
-        <AuthContext.Provider value={{ isAuthenticated, token, login, logout }}>
+        <AuthContext.Provider value={{ isAuthenticated, user, login, logout }}>
             {children}
         </AuthContext.Provider>
     );

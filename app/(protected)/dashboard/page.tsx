@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { LogOut, Search, LayoutGrid, List, FolderOpen, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/authStore";
+import { logoutUser } from "@/services/authService";
 import { fetchProjects, createProject, deleteProject } from "@/services/projectService";
 import type { CreateProjectPayload } from "@/services/projectService";
 import { ProjectCard } from "@/components/dashboard/ProjectCard";
@@ -52,9 +53,15 @@ export default function DashboardPage() {
     );
 
     // ---- Handlers -----------------------
-    function handleLogout() {
-        logout();
-        router.replace("/login");
+    async function handleLogout() {
+        try {
+            await logoutUser();
+        } catch {
+            // ignore network errors on logout
+        } finally {
+            logout();
+            router.replace("/login");
+        }
     }
 
     async function handleCreateProject(data: CreateProjectPayload) {
