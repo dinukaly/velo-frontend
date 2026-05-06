@@ -34,8 +34,8 @@ export default function LoginPage() {
         const password = (form.elements.namedItem("password") as HTMLInputElement).value;
 
         try {
-            const { token } = await loginUser({ email, password });
-            login(token);
+            const user = await loginUser({ email, password });
+            login(user);
             toast.success("Welcome back!");
             router.push("/dashboard");
         } catch (err: unknown) {

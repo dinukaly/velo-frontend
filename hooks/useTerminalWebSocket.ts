@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { Terminal as XTerm } from "@xterm/xterm";
-import { useAuthStore } from "@/store/authStore";
 import { useTerminalStore } from "@/store/terminalStore";
+import api from "@/services/api";
 
 // Constants
 
@@ -131,14 +131,9 @@ export function useTerminalWebSocket({
         const wsBase = apiBase.replace(/^http/, "ws").replace(/\/api.*$/, "");
         const wsUrl = `${wsBase}/api/projects/${projectId}/terminal`;
 
-        // Attach the JWT token as a query parameter (standard approach; cookies
-        // are not available for WS connections from the browser).
-        const token = useAuthStore.getState().token;
-        const fullUrl = token ? `${wsUrl}?token=${encodeURIComponent(token)}` : wsUrl;
-
         setStatus("connecting");
 
-        const ws = new WebSocket(fullUrl);
+        const ws = new WebSocket(wsUrl); // Cookies are automatically sent by the browser
         wsRef.current = ws;
 
         // onopen (stable reference) 
@@ -201,6 +196,12 @@ export function useTerminalWebSocket({
 
             // Abnormal closure — schedule a reconnect with exponential backoff.
             const attempt = attemptsRef.current;
+
+            // If the closure was due to a policy violation (likely expired token),
+            // trigger a dummy request to force a token refresh via Axios.
+            if (event.code === 1008) {
+                api.get("/v1/auth/session").catch(() => {});
+            }
 
             if (attempt >= MAX_RECONNECT_ATTEMPTS) {
                 setStatus("disconnected");

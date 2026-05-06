@@ -36,8 +36,8 @@ export default function RegisterPage() {
       .value;
 
     try {
-      const { token } = await registerUser({ name, email, password });
-      login(token);
+      const user = await registerUser({ name, email, password });
+      login(user);
       toast.success("Account created successfully!");
       router.push("/dashboard");
     } catch (err: unknown) {

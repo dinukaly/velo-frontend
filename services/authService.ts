@@ -11,16 +11,22 @@ export interface RegisterRequest {
     password: string;
 }
 
-export interface AuthResponse {
-    token: string;
+export interface UserResponse {
+    id?: string;
+    name?: string;
+    email?: string;
 }
 
-export async function loginUser(data: LoginRequest): Promise<AuthResponse> {
-    const response = await api.post<AuthResponse>("/v1/auth/signin", data);
+export async function loginUser(data: LoginRequest): Promise<UserResponse> {
+    const response = await api.post<UserResponse>("/v1/auth/signin", data);
     return response.data;
 }
 
-export async function registerUser(data: RegisterRequest): Promise<AuthResponse> {
-    const response = await api.post<AuthResponse>("/v1/auth/signup", data);
+export async function registerUser(data: RegisterRequest): Promise<UserResponse> {
+    const response = await api.post<UserResponse>("/v1/auth/signup", data);
     return response.data;
+}
+
+export async function logoutUser(): Promise<void> {
+    await api.post("/v1/auth/logout");
 }
