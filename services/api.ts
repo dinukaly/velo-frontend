@@ -23,26 +23,30 @@ const api = axios.create({
     headers: {
         "Content-Type": "application/json",
     },
-    timeout: 10_000,
+    withCredentials: true,
+    timeout: 30_000,
 });
 
-// Request Interceptor
-// Attaches the JWT token from the Zustand store to every outgoing request.
-api.interceptors.request.use(
-    (config: InternalAxiosRequestConfig) => {
-        const token = useAuthStore.getState().token;
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-    },
-    (error: AxiosError) => Promise.reject(error)
-);
+export interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
+    _retry?: boolean;
+}
+
+let isRefreshing = false;
+let refreshSubscribers: ((token: string) => void)[] = [];
+
+function subscribeTokenRefresh(cb: (token: string) => void) {
+    refreshSubscribers.push(cb);
+}
+
+function onRefreshed(token: string) {
+    refreshSubscribers.map((cb) => cb(token));
+    refreshSubscribers = [];
+}
 
 // Response Interceptor
 // 1. Unwraps the backend's APIResponse wrapper so every service receives the
 //    plain payload directly via `response.data`.
-// 2. Auto-logouts on 401 Unauthorized.
+// 2. Handles 401 Unauthorized via refresh token logic and retries.
 api.interceptors.response.use(
     (response: AxiosResponse) => {
         // Transparently unwrap { status, message, data } → data
@@ -51,14 +55,56 @@ api.interceptors.response.use(
         }
         return response;
     },
-    (error: AxiosError) => {
-        if (error.response?.status === 401) {
-            // Token has expired or is invalid — clear auth state.
-            useAuthStore.getState().logout();
+    async (error: AxiosError) => {
+        const originalRequest = error.config as CustomAxiosRequestConfig;
 
-            // Only redirect if running in the browser.
-            if (typeof window !== "undefined") {
-                window.location.href = "/login";
+        if (!originalRequest) {
+            return Promise.reject(error);
+        }
+
+        // Skip interceptor for refresh endpoint to avoid infinite loops if it 401s
+        if (originalRequest.url?.includes("/v1/auth/refresh")) {
+            return Promise.reject(error);
+        }
+
+        if (error.response?.status === 401 && !originalRequest._retry) {
+            console.log("401 detected → attempting refresh");
+            
+
+            if (isRefreshing) {
+                console.log("Refresh already in progress → queuing request");
+                return new Promise((resolve) => {
+                    subscribeTokenRefresh(() => {
+                        resolve(api(originalRequest));
+                    });
+                });
+            }
+
+            originalRequest._retry = true;
+            isRefreshing = true;
+
+            try {
+                // Call the refresh endpoint to obtain a new access token (cookie)
+                await api.post("/v1/auth/refresh");
+                console.log("refresh success");
+
+                isRefreshing = false;
+                onRefreshed(""); // Cookies are updated automatically
+
+                // Retry the original request
+                return api(originalRequest);
+            } catch (refreshError) {
+                console.log("refresh failed", refreshError);
+                isRefreshing = false;
+                refreshSubscribers = [];
+
+                // If token refresh fails, clear auth state and redirect to login
+                useAuthStore.getState().logout();
+                if (typeof window !== "undefined") {
+                    window.location.href = "/login";
+                }
+
+                return Promise.reject(refreshError);
             }
         }
 
