@@ -20,7 +20,6 @@ import { toast } from "sonner";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const login = useAuthStore((state) => state.login);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,10 +35,11 @@ export default function RegisterPage() {
       .value;
 
     try {
-      const user = await registerUser({ name, email, password });
-      login(user);
-      toast.success("Account created successfully!");
-      router.push("/dashboard");
+      await registerUser({ name, email, password });
+      // Store email temporarily for the check-email page
+      sessionStorage.setItem("pendingVerificationEmail", email);
+      toast.success("Account created successfully! Check your email.");
+      router.push("/check-email");
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };
       const errorMsg = axiosErr?.response?.data?.message ?? "Registration failed. Please try again.";

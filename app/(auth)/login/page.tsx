@@ -15,14 +15,16 @@ import {
 } from "@/components/ui/card";
 import { FormInput } from "@/components/FormInput";
 import { useAuthStore } from "@/store/authStore";
-import { loginUser } from "@/services/authService";
+import { loginUser, resendVerification } from "@/services/authService";
 import { toast } from "sonner";
 
 export default function LoginPage() {
     const router = useRouter();
     const login = useAuthStore((state) => state.login);
     const [isLoading, setIsLoading] = useState(false);
+    const [isResending, setIsResending] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
@@ -39,12 +41,34 @@ export default function LoginPage() {
             toast.success("Welcome back!");
             router.push("/dashboard");
         } catch (err: unknown) {
-            const axiosErr = err as { response?: { data?: { message?: string } } };
-            const errorMsg = axiosErr?.response?.data?.message ?? "Invalid credentials. Please try again.";
-            setError(errorMsg);
-            toast.error(errorMsg);
+            const axiosErr = err as { response?: { data?: { message?: string; data?: { code?: string; email?: string } } } };
+            const responseData = axiosErr?.response?.data;
+            const errorMsg = responseData?.message ?? "Invalid credentials. Please try again.";
+            
+            if (responseData?.data?.code === "EMAIL_NOT_VERIFIED" && responseData.data.email) {
+                setUnverifiedEmail(responseData.data.email);
+                setError(null); // Clear generic error
+            } else {
+                setUnverifiedEmail(null);
+                setError(errorMsg);
+                toast.error(errorMsg);
+            }
         } finally {
             setIsLoading(false);
+        }
+    }
+
+    async function handleResend() {
+        if (!unverifiedEmail) return;
+        setIsResending(true);
+        try {
+            await resendVerification(unverifiedEmail);
+            toast.success("Verification email resent. Please check your inbox.");
+        } catch (err: unknown) {
+            const axiosErr = err as { response?: { data?: { message?: string } } };
+            toast.error(axiosErr?.response?.data?.message ?? "Failed to resend email. Please try again later.");
+        } finally {
+            setIsResending(false);
         }
     }
 
@@ -108,7 +132,31 @@ export default function LoginPage() {
                         </div>
                     </div>
 
-                    {/* Error message */}
+                    {/* Unverified Error message */}
+                    {unverifiedEmail && (
+                        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-3 text-sm">
+                            <p className="text-amber-500 mb-2 font-medium">Please verify your email address.</p>
+                            <Button 
+                                type="button" 
+                                variant="outline" 
+                                size="sm" 
+                                className="w-full border-amber-500/50 text-amber-500 hover:bg-amber-500/20"
+                                onClick={handleResend}
+                                disabled={isResending}
+                            >
+                                {isResending ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                                        Sending...
+                                    </>
+                                ) : (
+                                    "Resend Verification Email"
+                                )}
+                            </Button>
+                        </div>
+                    )}
+
+                    {/* Generic Error message */}
                     {error && (
                         <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
                             {error}
