@@ -136,7 +136,7 @@ export default function LoginPage() {
                                 className="px-0 h-auto text-xs text-muted-foreground hover:text-primary"
                                 asChild
                             >
-                                <Link href="#">Forgot password?</Link>
+                                <Link href="/forgot-password">Forgot password?</Link>
                             </Button>
                         </div>
                     </div>
