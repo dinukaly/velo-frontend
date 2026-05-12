@@ -13,6 +13,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { resendVerification } from "@/services/authService";
+import { useVerificationCooldown } from "@/hooks/useVerificationCooldown";
+import { formatCooldown } from "@/lib/verificationCooldown";
 import { toast } from "sonner";
 import Link from "next/link";
 
@@ -21,6 +23,7 @@ export default function CheckEmailPage() {
   const [email, setEmail] = useState<string | null>(null);
   const [isResending, setIsResending] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const { remainingSeconds, canResend, beginCooldown } = useVerificationCooldown(email);
 
   useEffect(() => {
     setIsMounted(true);
@@ -34,9 +37,15 @@ export default function CheckEmailPage() {
 
   async function handleResend() {
     if (!email) return;
+    if (!canResend) {
+      toast.info(`Please wait ${formatCooldown(remainingSeconds)} before requesting another email.`);
+      return;
+    }
+
     setIsResending(true);
     try {
       await resendVerification(email);
+      beginCooldown();
       toast.success("Verification email resent. Please check your inbox.");
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };
@@ -81,17 +90,24 @@ export default function CheckEmailPage() {
           variant="outline" 
           className="w-full" 
           onClick={handleResend}
-          disabled={isResending}
+          disabled={isResending || !canResend}
         >
           {isResending ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Sending...
             </>
+          ) : !canResend ? (
+            `Resend available in ${formatCooldown(remainingSeconds)}`
           ) : (
             "Resend verification email"
           )}
         </Button>
+        {!canResend && (
+          <p className="text-xs text-muted-foreground">
+            To protect your inbox, you can request another email after the cooldown ends.
+          </p>
+        )}
         <Button variant="link" size="sm" asChild className="w-full text-muted-foreground">
           <Link href="/login">Back to Login</Link>
         </Button>

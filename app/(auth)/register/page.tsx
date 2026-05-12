@@ -14,8 +14,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FormInput } from "@/components/FormInput";
-import { useAuthStore } from "@/store/authStore";
 import { registerUser } from "@/services/authService";
+import { startVerificationCooldown } from "@/lib/verificationCooldown";
 import { toast } from "sonner";
 
 export default function RegisterPage() {
@@ -36,8 +36,8 @@ export default function RegisterPage() {
 
     try {
       await registerUser({ name, email, password });
-      // Store email temporarily for the check-email page
       sessionStorage.setItem("pendingVerificationEmail", email);
+      startVerificationCooldown(email);
       toast.success("Account created successfully! Check your email.");
       router.push("/check-email");
     } catch (err: unknown) {

@@ -16,6 +16,8 @@ import {
 import { FormInput } from "@/components/FormInput";
 import { useAuthStore } from "@/store/authStore";
 import { loginUser, resendVerification } from "@/services/authService";
+import { useVerificationCooldown } from "@/hooks/useVerificationCooldown";
+import { formatCooldown } from "@/lib/verificationCooldown";
 import { toast } from "sonner";
 
 export default function LoginPage() {
@@ -25,6 +27,7 @@ export default function LoginPage() {
     const [isResending, setIsResending] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+    const { remainingSeconds, canResend, beginCooldown } = useVerificationCooldown(unverifiedEmail);
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
@@ -60,9 +63,15 @@ export default function LoginPage() {
 
     async function handleResend() {
         if (!unverifiedEmail) return;
+        if (!canResend) {
+            toast.info(`Please wait ${formatCooldown(remainingSeconds)} before requesting another email.`);
+            return;
+        }
+
         setIsResending(true);
         try {
             await resendVerification(unverifiedEmail);
+            beginCooldown();
             toast.success("Verification email resent. Please check your inbox.");
         } catch (err: unknown) {
             const axiosErr = err as { response?: { data?: { message?: string } } };
@@ -142,17 +151,24 @@ export default function LoginPage() {
                                 size="sm" 
                                 className="w-full border-amber-500/50 text-amber-500 hover:bg-amber-500/20"
                                 onClick={handleResend}
-                                disabled={isResending}
+                                disabled={isResending || !canResend}
                             >
                                 {isResending ? (
                                     <>
                                         <Loader2 className="mr-2 h-3 w-3 animate-spin" />
                                         Sending...
                                     </>
+                                ) : !canResend ? (
+                                    `Resend available in ${formatCooldown(remainingSeconds)}`
                                 ) : (
                                     "Resend Verification Email"
                                 )}
                             </Button>
+                            {!canResend && (
+                                <p className="mt-2 text-xs text-amber-500/90">
+                                    Please wait {formatCooldown(remainingSeconds)} before requesting another verification email.
+                                </p>
+                            )}
                         </div>
                     )}
 
