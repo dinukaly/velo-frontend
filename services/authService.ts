@@ -30,3 +30,7 @@ export async function registerUser(data: RegisterRequest): Promise<UserResponse>
 export async function logoutUser(): Promise<void> {
     await api.post("/v1/auth/logout");
 }
+
+export async function resendVerification(email: string): Promise<void> {
+    await api.post("/v1/auth/resend-verification", { email });
+}
