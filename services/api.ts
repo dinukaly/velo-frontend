@@ -34,6 +34,10 @@ export interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
 let isRefreshing = false;
 let refreshSubscribers: ((token: string) => void)[] = [];
 
+function shouldSkipRefresh(url?: string) {
+    return url?.includes("/v1/auth/") ?? false;
+}
+
 function subscribeTokenRefresh(cb: (token: string) => void) {
     refreshSubscribers.push(cb);
 }
@@ -62,8 +66,8 @@ api.interceptors.response.use(
             return Promise.reject(error);
         }
 
-        // Skip interceptor for refresh endpoint to avoid infinite loops if it 401s
-        if (originalRequest.url?.includes("/v1/auth/refresh")) {
+        // Auth endpoints should surface their own 401 payloads directly to the UI.
+        if (shouldSkipRefresh(originalRequest.url)) {
             return Promise.reject(error);
         }
 
