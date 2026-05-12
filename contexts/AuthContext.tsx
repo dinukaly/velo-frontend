@@ -16,7 +16,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Define which routes are meant for unauthenticated users
-const AUTH_ROUTES = ["/login", "/register"];
+const AUTH_ROUTES = ["/login", "/register", "/check-email", "/verify-email/status"];
 // Define which prefixes are protected
 const PROTECTED_PREFIXES = ["/dashboard", "/project"];
 const DEFAULT_PROTECTED_REDIRECT = "/login";
