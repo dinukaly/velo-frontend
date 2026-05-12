@@ -11,6 +11,15 @@ export interface RegisterRequest {
     password: string;
 }
 
+export interface ForgotPasswordRequest {
+    email: string;
+}
+
+export interface ResetPasswordRequest {
+    token: string;
+    password: string;
+}
+
 export interface UserResponse {
     id?: string;
     name?: string;
@@ -33,4 +42,12 @@ export async function logoutUser(): Promise<void> {
 
 export async function resendVerification(email: string): Promise<void> {
     await api.post("/v1/auth/resend-verification", { email });
+}
+
+export async function requestPasswordReset(data: ForgotPasswordRequest): Promise<void> {
+    await api.post("/v1/auth/forgot-password", data);
+}
+
+export async function resetPassword(data: ResetPasswordRequest): Promise<void> {
+    await api.post("/v1/auth/reset-password", data);
 }
