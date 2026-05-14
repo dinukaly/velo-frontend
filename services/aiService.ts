@@ -8,8 +8,7 @@ export interface ChatHistoryMessage {
 export interface AIChatRequest {
   message: string;
   projectId: string;
-  fileId: string;
-  currentFilePath?: string;
+  filePath?: string;
   selectedCode?: string;
   history?: ChatHistoryMessage[];
 }

@@ -26,8 +26,7 @@ interface ChatMessage {
 }
 export interface IdeAiChatProps {
   projectId: string;
-  fileId: string | null;
-  currentFilePath: string | null;
+  filePath: string | null;
   selectedCode?: string;
   onClose: () => void;
 }
@@ -154,8 +153,7 @@ function ThinkingBubble() {
 // Main Component
 export function IdeAiChat({
   projectId,
-  fileId,
-  currentFilePath,
+  filePath,
   selectedCode,
   onClose,
 }: IdeAiChatProps) {
@@ -214,8 +212,7 @@ export function IdeAiChat({
       const res = await sendAIMessage({
         message: trimmed,
         projectId,
-        fileId: fileId ?? "unknown",
-        currentFilePath: currentFilePath ?? "unknown",
+        filePath: filePath ?? undefined,
         selectedCode: selectedCode ?? undefined,
         history: chatHistory,
       });
@@ -279,10 +276,10 @@ export function IdeAiChat({
           </div>
           <span className="text-xs font-semibold text-foreground">Velo AI</span>
           {/* Active file pill */}
-          {currentFilePath && (
+          {filePath && (
             <span className="hidden sm:flex items-center gap-1 rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] text-muted-foreground border border-white/[0.06] truncate max-w-[140px]">
               <Code2 className="h-2.5 w-2.5 shrink-0" />
-              <span className="truncate">{currentFilePath.split("/").pop()}</span>
+              <span className="truncate">{filePath.split("/").pop()}</span>
             </span>
           )}
         </div>

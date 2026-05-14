@@ -254,10 +254,7 @@ export default function ProjectPage() {
                     <div className="w-80 shrink-0 flex flex-col overflow-hidden">
                         <IdeAiChat
                             projectId={projectId}
-                            fileId={activeTabId}
-                            currentFilePath={
-                                openTabs.find((t) => t.id === activeTabId)?.name ?? null
-                            }
+                            filePath={activeTabId}
                             onClose={() => setAiOpen(false)}
                         />
                     </div>
