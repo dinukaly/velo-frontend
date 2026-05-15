@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { Loader2 } from "lucide-react";
-import { UserResponse } from "@/services/authService";
+import { fetchCurrentUser, UserResponse } from "@/services/authService";
 
 interface AuthContextType {
     isAuthenticated: boolean;
@@ -18,13 +18,15 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // Define which routes are meant for unauthenticated users
 const AUTH_ROUTES = ["/login", "/register", "/check-email", "/verify-email/status", "/forgot-password"];
 // Define which prefixes are protected
-const PROTECTED_PREFIXES = ["/dashboard", "/project"];
+const PROTECTED_PREFIXES = ["/dashboard", "/project", "/admin"];
 const DEFAULT_PROTECTED_REDIRECT = "/login";
 const DEFAULT_AUTH_REDIRECT = "/dashboard";
+const DEFAULT_ADMIN_REDIRECT = "/admin";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { user, isAuthenticated, login, logout } = useAuthStore();
     const [isHydrated, setIsHydrated] = useState(false);
+    const [isSessionChecked, setIsSessionChecked] = useState(false);
     const router = useRouter();
     const pathname = usePathname();
 
@@ -38,22 +40,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
     }, []);
 
-    // Perform routing logic once hydrated
     useEffect(() => {
         if (!isHydrated) return;
 
+        if (!isAuthenticated) {
+            setIsSessionChecked(true);
+            return;
+        }
+
+        let cancelled = false;
+        setIsSessionChecked(false);
+
+        fetchCurrentUser()
+            .then((currentUser) => {
+                if (!cancelled) {
+                    login(currentUser);
+                }
+            })
+            .catch(() => {
+                if (!cancelled) {
+                    logout();
+                }
+            })
+            .finally(() => {
+                if (!cancelled) {
+                    setIsSessionChecked(true);
+                }
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [isHydrated, isAuthenticated, login, logout]);
+
+    // Perform routing logic once hydrated and session has been checked
+    useEffect(() => {
+        if (!isHydrated || !isSessionChecked) return;
+
         const isAuthRoute = AUTH_ROUTES.includes(pathname);
         const isProtectedRoute = PROTECTED_PREFIXES.some(prefix => pathname.startsWith(prefix));
+        const isAdminRoute = pathname.startsWith("/admin");
 
         if (!isAuthenticated && isProtectedRoute) {
             router.replace(DEFAULT_PROTECTED_REDIRECT);
-        } else if (isAuthenticated && isAuthRoute) {
+        } else if (isAuthenticated && isAdminRoute && user?.role !== "ADMIN") {
             router.replace(DEFAULT_AUTH_REDIRECT);
+        } else if (isAuthenticated && isAuthRoute) {
+            router.replace(user?.role === "ADMIN" ? DEFAULT_ADMIN_REDIRECT : DEFAULT_AUTH_REDIRECT);
         }
-    }, [isHydrated, isAuthenticated, pathname, router]);
+    }, [isHydrated, isSessionChecked, isAuthenticated, pathname, router, user?.role]);
 
     // Show a global loading state during hydration to avoid flashing restricted views
-    if (!isHydrated) {
+    if (!isHydrated || !isSessionChecked) {
         return (
             <div className="flex min-h-screen flex-col items-center justify-center bg-background gap-6">
                 <div className="relative flex items-center justify-center w-20 h-20 rounded-2xl bg-primary/5 border border-primary/20 animate-pulse">
@@ -88,6 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Maintain a loader if we are in the middle of an impending redirect
     const isAuthRoute = AUTH_ROUTES.includes(pathname);
     const isProtectedRoute = PROTECTED_PREFIXES.some(prefix => pathname.startsWith(prefix));
+    const isAdminRoute = pathname.startsWith("/admin");
 
     if (!isAuthenticated && isProtectedRoute) {
         return (
@@ -99,6 +138,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (isAuthenticated && isAuthRoute) {
+        return (
+            <div className="flex min-h-screen flex-col items-center justify-center bg-background gap-4">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">Redirecting to workspace...</p>
+            </div>
+        );
+    }
+
+    if (isAuthenticated && isAdminRoute && user?.role !== "ADMIN") {
         return (
             <div className="flex min-h-screen flex-col items-center justify-center bg-background gap-4">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />

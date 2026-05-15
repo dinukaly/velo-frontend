@@ -22,6 +22,10 @@ interface TerminalState {
     setStatus: (status: TerminalConnectionStatus) => void;
     setReconnectAttempts: (n: number) => void;
     setIsOpen: (open: boolean) => void;
+    
+    /** Global callback to send data to the terminal from anywhere */
+    sendData: ((data: string) => void) | null;
+    setSendData: (fn: ((data: string) => void) | null) => void;
 }
 
 // Store
@@ -34,4 +38,6 @@ export const useTerminalStore = create<TerminalState>()((set) => ({
     setStatus: (status) => set({ status }),
     setReconnectAttempts: (n) => set({ reconnectAttempts: n }),
     setIsOpen: (open) => set({ isOpen: open }),
+    sendData: null,
+    setSendData: (fn) => set({ sendData: fn }),
 }));

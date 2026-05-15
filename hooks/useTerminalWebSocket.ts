@@ -68,7 +68,7 @@ export function useTerminalWebSocket({
     const attemptsRef = useRef(0);
     const isUnmountedRef = useRef(false);
 
-    const { setStatus, setReconnectAttempts } = useTerminalStore.getState();
+    const { setStatus, setReconnectAttempts, setSendData } = useTerminalStore.getState();
 
     // Helpers 
 
@@ -159,6 +159,7 @@ export function useTerminalWebSocket({
 
             startHeartbeat();
             onConnected(sendData);
+            setSendData(sendData);
         };
 
         // onmessage (stable reference) 
@@ -186,9 +187,9 @@ export function useTerminalWebSocket({
 
             if (isUnmountedRef.current) return;
 
-            // Normal closure (code 1000) or explicit user-initiated close.
             if (event.code === 1000) {
                 setStatus("disconnected");
+                setSendData(null);
                 writeStatus("[Terminal session closed]", "yellow");
                 onDisconnected();
                 return;
@@ -205,6 +206,7 @@ export function useTerminalWebSocket({
 
             if (attempt >= MAX_RECONNECT_ATTEMPTS) {
                 setStatus("disconnected");
+                setSendData(null);
                 writeStatus(
                     `[Could not reconnect after ${MAX_RECONNECT_ATTEMPTS} attempts]`,
                     "red"
@@ -257,6 +259,7 @@ export function useTerminalWebSocket({
             }
 
             setStatus("idle");
+            setSendData(null);
         };
         // Only re-run when the xterm instance or projectId changes.
         // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -35,7 +35,17 @@ let isRefreshing = false;
 let refreshSubscribers: ((token: string) => void)[] = [];
 
 function shouldSkipRefresh(url?: string) {
-    return url?.includes("/v1/auth/") ?? false;
+    if (!url) return false;
+
+    return [
+        "/v1/auth/signin",
+        "/v1/auth/signup",
+        "/v1/auth/refresh",
+        "/v1/auth/logout",
+        "/v1/auth/resend-verification",
+        "/v1/auth/forgot-password",
+        "/v1/auth/reset-password",
+    ].some((endpoint) => url.includes(endpoint));
 }
 
 function subscribeTokenRefresh(cb: (token: string) => void) {

@@ -50,6 +50,8 @@ interface IdeTopBarProps {
     isSaving: boolean;
     /** True if any open tab has unsaved changes */
     hasUnsavedChanges: boolean;
+    /** Called when the user clicks Run */
+    onRun?: () => void;
 }
 
 export function IdeTopBar({
@@ -63,6 +65,7 @@ export function IdeTopBar({
     onSave,
     isSaving,
     hasUnsavedChanges,
+    onRun,
 }: IdeTopBarProps) {
     const router = useRouter();
     const langColour = LANGUAGE_COLOURS[project.language];
@@ -192,12 +195,13 @@ export function IdeTopBar({
                     <Settings className="h-4 w-4" />
                 </Button>
 
-                {/* Run (placeholder) */}
+                {/* Run */}
                 <Button
                     size="sm"
                     className="h-7 gap-1.5 px-3 text-xs bg-green-600 hover:bg-green-700 text-white border-0"
-                    title="Run (coming soon)"
-                    disabled
+                    title="Run Project"
+                    onClick={onRun}
+                    disabled={!onRun}
                 >
                     <Play className="h-3.5 w-3.5 fill-current" />
                     Run

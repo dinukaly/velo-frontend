@@ -16,6 +16,7 @@ import type { FileTab } from "@/types/fileTab";
 import type { Project } from "@/types/project";
 import { toast } from "sonner";
 import { IdeAiChat } from "@/components/ide/IdeChat";
+import { useTerminalStore } from "@/store/terminalStore";
 
 function inferLanguage(filename: string): string {
     const ext = filename.split(".").pop()?.toLowerCase();
@@ -168,6 +169,50 @@ export default function ProjectPage() {
         }
     }, [activeTabId, isSaving, openTabs, projectId]);
 
+    // Run handler
+    const handleRun = useCallback(() => {
+        if (!project) return;
+        
+        if (!terminalOpen) {
+            setTerminalOpen(true);
+            toast.info("Terminal opening, please wait a moment and click Run again.");
+            return;
+        }
+
+        const sendData = useTerminalStore.getState().sendData;
+        if (!sendData) {
+            toast.error("Terminal not connected.");
+            return;
+        }
+
+        let cmd = "echo 'No default run command configured for this language'\n";
+        switch (project.language) {
+            case "TypeScript":
+            case "JavaScript":
+                cmd = "npm start\n";
+                break;
+            case "Python":
+                cmd = "python main.py\n";
+                break;
+            case "Go":
+                cmd = "go run .\n";
+                break;
+            case "Rust":
+                cmd = "cargo run\n";
+                break;
+            case "Java":
+                cmd = "mvn spring-boot:run\n";
+                break;
+            case "C++":
+                cmd = "g++ main.cpp -o main && ./main\n";
+                break;
+        }
+
+        // Clear terminal visually and run
+        sendData("clear\n");
+        setTimeout(() => sendData(cmd), 100);
+    }, [project, terminalOpen]);
+
     //  Loading state 
     if (projectLoading) {
         return (
@@ -224,6 +269,7 @@ export default function ProjectPage() {
                 onSave={handleSave}
                 isSaving={isSaving}
                 hasUnsavedChanges={openTabs.some((t) => t.isDirty)}
+                onRun={handleRun}
             />
 
             {/* ---- Workspace ------------------- */}

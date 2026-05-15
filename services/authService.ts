@@ -24,10 +24,16 @@ export interface UserResponse {
     id?: string;
     name?: string;
     email?: string;
+    role?: "USER" | "ADMIN";
 }
 
 export async function loginUser(data: LoginRequest): Promise<UserResponse> {
     const response = await api.post<UserResponse>("/v1/auth/signin", data);
+    return response.data;
+}
+
+export async function fetchCurrentUser(): Promise<UserResponse> {
+    const response = await api.get<UserResponse>("/v1/auth/me");
     return response.data;
 }
 

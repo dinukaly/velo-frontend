@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { LogOut, Search, LayoutGrid, List, FolderOpen, Loader2 } from "lucide-react";
+import { LogOut, Search, LayoutGrid, List, FolderOpen, Loader2, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/authStore";
 import { logoutUser } from "@/services/authService";
@@ -16,6 +16,7 @@ import { toast } from "sonner";
 
 export default function DashboardPage() {
     const router = useRouter();
+    const user = useAuthStore((state) => state.user);
     const logout = useAuthStore((state) => state.logout);
 
     // ---- State -----------------------
@@ -114,15 +115,28 @@ export default function DashboardPage() {
                     </svg>
                     Velo
                 </div>
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleLogout}
-                    className="text-muted-foreground hover:text-foreground"
-                >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Logout
-                </Button>
+                <div className="flex items-center gap-2">
+                    {user?.role === "ADMIN" && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => router.push("/admin")}
+                            className="text-muted-foreground hover:text-foreground"
+                        >
+                            <Shield className="mr-2 h-4 w-4" />
+                            Admin
+                        </Button>
+                    )}
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleLogout}
+                        className="text-muted-foreground hover:text-foreground"
+                    >
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Logout
+                    </Button>
+                </div>
             </header>
 
             {/*------Main content-------------------*/}
