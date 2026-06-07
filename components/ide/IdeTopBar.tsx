@@ -10,6 +10,7 @@ import {
     Settings,
     Loader2,
     Sparkles,
+    GitBranch,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -44,6 +45,9 @@ interface IdeTopBarProps {
     /** AI chat panel open state */
     aiOpen: boolean;
     onToggleAi: () => void;
+    /** Source control panel open state */
+    gitOpen: boolean;
+    onToggleGit: () => void;
     /** Called when the user clicks Save */
     onSave: () => void;
     /** True while the save request is in-flight */
@@ -62,6 +66,8 @@ export function IdeTopBar({
     onToggleTerminal,
     aiOpen,
     onToggleAi,
+    gitOpen,
+    onToggleGit,
     onSave,
     isSaving,
     hasUnsavedChanges,
@@ -181,6 +187,22 @@ export function IdeTopBar({
                     {aiOpen && (
                         <span className="absolute bottom-0.5 right-0.5 h-1.5 w-1.5 rounded-full bg-violet-400 animate-pulse" />
                     )}
+                </Button>
+
+                {/* Source control toggle */}
+                <Button
+                    variant={gitOpen ? "secondary" : "ghost"}
+                    size="icon"
+                    className={cn(
+                        "h-7 w-7 relative",
+                        gitOpen
+                            ? "text-primary bg-primary/10 hover:bg-primary/20"
+                            : "text-muted-foreground hover:text-foreground"
+                    )}
+                    onClick={onToggleGit}
+                    title={gitOpen ? "Close source control" : "Open source control"}
+                >
+                    <GitBranch className="h-4 w-4" />
                 </Button>
                 <Separator orientation="vertical" className="mx-1 h-5" />
 

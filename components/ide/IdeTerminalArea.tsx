@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, type PointerEvent as ReactPointerEvent } from "react";
 import { Terminal as XTerm } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
@@ -17,6 +17,8 @@ interface IdeTerminalAreaProps {
      * Forwarded to the WebSocket hook so it can build the correct endpoint URL.
      */
     projectId: string;
+    height?: number;
+    onResizeStart?: (event: ReactPointerEvent<HTMLDivElement>) => void;
 }
 
 // Status indicator helpers
@@ -84,7 +86,7 @@ function StatusLabel({ status }: { status: TerminalConnectionStatus }) {
  *  - Delegating all WebSocket lifecycle to `useTerminalWebSocket`.
  *  - Showing a connection status badge in the tab bar.
  */
-export function IdeTerminalArea({ projectId }: IdeTerminalAreaProps) {
+export function IdeTerminalArea({ projectId, height = 256, onResizeStart }: IdeTerminalAreaProps) {
     const [minimised, setMinimised] = useState(false);
 
     // xterm refs 
@@ -140,8 +142,14 @@ export function IdeTerminalArea({ projectId }: IdeTerminalAreaProps) {
         const handleResize = () => fitAddon.fit();
         window.addEventListener("resize", handleResize);
 
+        const resizeObserver = new ResizeObserver(() => {
+            fitAddon.fit();
+        });
+        resizeObserver.observe(terminalRef.current);
+
         return () => {
             window.removeEventListener("resize", handleResize);
+            resizeObserver.disconnect();
             dataDisposable.dispose();
             term.dispose();
             setXtermInstance(null);
@@ -171,10 +179,23 @@ export function IdeTerminalArea({ projectId }: IdeTerminalAreaProps) {
     return (
         <div
             className={cn(
-                "flex shrink-0 flex-col border-t border-border bg-[#0d0d0d] transition-all duration-200",
-                minimised ? "h-8" : "h-64"
+                "flex shrink-0 flex-col border-t border-border bg-[#0d0d0d]",
+                minimised && "h-8"
             )}
+            style={minimised ? undefined : { height }}
         >
+            {!minimised && (
+                <div
+                    className="relative h-1 shrink-0 cursor-row-resize bg-border/60 transition-colors hover:bg-green-400/80"
+                    role="separator"
+                    aria-orientation="horizontal"
+                    title="Resize terminal"
+                    onPointerDown={onResizeStart}
+                >
+                    <div className="absolute -bottom-1 -top-1 inset-x-0" />
+                </div>
+            )}
+
             {/* Terminal tab / title bar */}
             <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border/40 bg-card/40 px-3">
                 {/* Tab pill */}
