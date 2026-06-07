@@ -2,8 +2,9 @@
 
 import { useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
-import { Code2, X, Circle } from "lucide-react";
+import { Code2, X, Circle, GitCompare } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { GitDiffViewer } from "@/components/ide/GitDiffViewer";
 import type { FileTab } from "@/types/fileTab";
 import type { OnMount } from "@monaco-editor/react";
 import type { editor as MonacoEditorNs, editor } from "monaco-editor";
@@ -74,8 +75,12 @@ function TabBar({ tabs, activeTabId, onTabSelect, onTabClose }: TabBarProps) {
                             <div className="absolute inset-x-0 top-0 h-[2px] bg-primary rounded-b-none" />
                         )}
 
-                        {/* File colour dot */}
-                        <span className={cn("text-[10px]", fileColour(tab.name))}>●</span>
+                        {/* File or diff icon */}
+                        {tab.tabType === "diff" ? (
+                            <GitCompare className="h-3 w-3 text-primary" />
+                        ) : (
+                            <span className={cn("text-[10px]", fileColour(tab.name))}>●</span>
+                        )}
 
                         {/* Filename */}
                         <span className="leading-none">{tab.name}</span>
@@ -157,6 +162,7 @@ export function IdeEditorArea({
     const monacoRef = useRef<typeof import("monaco-editor") | null>(null);
     /** Stable ref that always holds the latest activeTabId for the change handler. */
     const activeTabIdRef = useRef<string | null>(activeTabId);
+    const openTabsRef = useRef<FileTab[]>(openTabs);
     /** Debounce timer for content changes. */
     const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -167,11 +173,19 @@ export function IdeEditorArea({
         activeTabIdRef.current = activeTabId;
     }, [activeTabId]);
 
+    useEffect(() => {
+        openTabsRef.current = openTabs;
+    }, [openTabs]);
+
     // When the active tab changes: update content + language in the existing editor
     useEffect(() => {
         const editor = editorRef.current;
         const monacoInst = monacoRef.current;
         if (!editor || !activeTab) return;
+        if (activeTab.tabType === "diff") {
+            editorRef.current = null;
+            return;
+        }
 
         // Update content only if it differs (avoids cursor jump on re-render)
         if (editor.getValue() !== activeTab.content) {
@@ -209,7 +223,8 @@ export function IdeEditorArea({
         // Track content changes for dirty state
         editor.onDidChangeModelContent(() => {
             const tabId = activeTabIdRef.current;
-            if (tabId) {
+            const tab = openTabsRef.current.find((t) => t.id === tabId);
+            if (tabId && tab?.tabType !== "diff") {
                 if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
                 typingTimeoutRef.current = setTimeout(() => {
                     onContentChange(tabId, editor.getValue());
@@ -261,13 +276,17 @@ export function IdeEditorArea({
 
             {/* Monaco Editor — mounted once, content swapped on tab change */}
             <div className="flex-1 overflow-hidden">
-                <MonacoEditor
+                {activeTab?.tabType === "diff" && activeTab.diff ? (
+                    <GitDiffViewer diff={activeTab.diff} />
+                ) : (
+                    <MonacoEditor
                     height="100%"
                     theme="vs-dark"
                     defaultValue="// Loading…"
                     onMount={handleMount}
                     options={MONACO_OPTIONS}
-                />
+                    />
+                )}
             </div>
         </div>
     );

@@ -409,13 +409,14 @@ function TreeNode({ node, depth }: { node: FileNode; depth: number }) {
 interface IdeSidebarProps {
     project: Project;
     open: boolean;
+    width?: number;
     /** The project ID used to fetch the file tree from the backend. */
     projectId: string;
     /** Called when the user clicks a file node. Opens it in an editor tab. */
     onFileOpen?: (node: FileNode) => void;
 }
 
-export function IdeSidebar({ project, open, onFileOpen, projectId }: IdeSidebarProps) {
+export function IdeSidebar({ project, open, onFileOpen, projectId, width = 224 }: IdeSidebarProps) {
     const [tree, setTree] = useState<FileNode[]>([]);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [expandedIds, setExpandedIds] = useState<Set<string>>(
@@ -584,7 +585,10 @@ export function IdeSidebar({ project, open, onFileOpen, projectId }: IdeSidebarP
 
     return (
         <FileTreeCtx.Provider value={ctx}>
-            <aside className="flex h-full w-56 shrink-0 flex-col overflow-hidden border-r border-border bg-card/50">
+            <aside
+                className="flex h-full shrink-0 flex-col overflow-hidden border-r border-border bg-card/50"
+                style={{ width }}
+            >
                 {/* ---Header----------------*/}
                 <div className="flex items-center justify-between border-b border-border/60 px-3 py-2">
                     <span className="truncate text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -629,7 +633,7 @@ export function IdeSidebar({ project, open, onFileOpen, projectId }: IdeSidebarP
                 </div>
 
                 {/* ----- File tree --------------- */}
-                <div className="flex-1 overflow-y-auto py-1">
+                <div className="min-h-0 flex-1 overflow-auto py-1">
                     {tree.map((node) => (
                         <TreeNode key={node.id} node={node} depth={0} />
                     ))}

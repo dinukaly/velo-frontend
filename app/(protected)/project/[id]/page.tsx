@@ -1,6 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import {
+    useState,
+    useEffect,
+    useCallback,
+    useRef,
+    type Dispatch,
+    type PointerEvent as ReactPointerEvent,
+    type SetStateAction,
+} from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { fetchProjectById } from "@/services/projectService";
@@ -10,13 +18,64 @@ import { IdeTopBar } from "@/components/ide/IdeTopBar";
 import { IdeSidebar } from "@/components/ide/IdeSidebar";
 import { IdeEditorArea } from "@/components/ide/IdeEditorArea";
 import { IdeTerminalArea } from "@/components/ide/IdeTerminalArea";
+import { IdeGitPanel } from "@/components/ide/IdeGitPanel";
 import { Button } from "@/components/ui/button";
 import type { FileNode } from "@/types/fileTree";
 import type { FileTab } from "@/types/fileTab";
+import type { GitDiff } from "@/types/git";
 import type { Project } from "@/types/project";
 import { toast } from "sonner";
 import { IdeAiChat } from "@/components/ide/IdeChat";
 import { useTerminalStore } from "@/store/terminalStore";
+
+function clamp(value: number, min: number, max: number) {
+    return Math.min(Math.max(value, min), max);
+}
+
+function startPanelResize(
+    event: ReactPointerEvent<HTMLDivElement>,
+    {
+        axis,
+        direction = 1,
+        max,
+        min,
+        setSize,
+        size,
+    }: {
+        axis: "x" | "y";
+        direction?: 1 | -1;
+        max: number;
+        min: number;
+        setSize: Dispatch<SetStateAction<number>>;
+        size: number;
+    }
+) {
+    event.preventDefault();
+
+    const startPoint = axis === "x" ? event.clientX : event.clientY;
+    const cursor = axis === "x" ? "col-resize" : "row-resize";
+    const previousCursor = document.body.style.cursor;
+    const previousUserSelect = document.body.style.userSelect;
+
+    document.body.style.cursor = cursor;
+    document.body.style.userSelect = "none";
+
+    function handlePointerMove(moveEvent: PointerEvent) {
+        const currentPoint = axis === "x" ? moveEvent.clientX : moveEvent.clientY;
+        const delta = (currentPoint - startPoint) * direction;
+        setSize(clamp(size + delta, min, max));
+    }
+
+    function handlePointerUp() {
+        document.body.style.cursor = previousCursor;
+        document.body.style.userSelect = previousUserSelect;
+        window.removeEventListener("pointermove", handlePointerMove);
+        window.removeEventListener("pointerup", handlePointerUp);
+    }
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+}
 
 function inferLanguage(filename: string): string {
     const ext = filename.split(".").pop()?.toLowerCase();
@@ -47,6 +106,12 @@ export default function ProjectPage() {
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [terminalOpen, setTerminalOpen] = useState(true);
     const [aiOpen, setAiOpen] = useState(false);
+    const [gitOpen, setGitOpen] = useState(false);
+    const [fileTreeVersion, setFileTreeVersion] = useState(0);
+    const [sidebarWidth, setSidebarWidth] = useState(224);
+    const [terminalHeight, setTerminalHeight] = useState(256);
+    const [aiWidth, setAiWidth] = useState(320);
+    const [gitWidth, setGitWidth] = useState(384);
 
     // --- tab state ------------
     const [openTabs, setOpenTabs] = useState<FileTab[]>([]);
@@ -169,6 +234,36 @@ export default function ProjectPage() {
         }
     }, [activeTabId, isSaving, openTabs, projectId]);
 
+    const handleRepositoryChanged = useCallback(() => {
+        setOpenTabs([]);
+        setActiveTabId(null);
+        setFileTreeVersion((version) => version + 1);
+    }, []);
+
+    const handleOpenGitDiff = useCallback((diff: GitDiff, staged: boolean) => {
+        const path = diff.path ?? "working-tree";
+        const id = `git-diff:${staged ? "staged" : "unstaged"}:${path}`;
+        const name = `${path.split("/").pop() ?? "Diff"} ${staged ? "(staged)" : "(changes)"}`;
+
+        const diffTab: FileTab = {
+            id,
+            name,
+            language: "diff",
+            content: diff.diff,
+            isDirty: false,
+            tabType: "diff",
+            diff,
+        };
+
+        setOpenTabs((prev) => {
+            const exists = prev.some((tab) => tab.id === id);
+            return exists
+                ? prev.map((tab) => (tab.id === id ? diffTab : tab))
+                : [...prev, diffTab];
+        });
+        setActiveTabId(id);
+    }, []);
+
     // Run handler
     const handleRun = useCallback(() => {
         if (!project) return;
@@ -266,6 +361,8 @@ export default function ProjectPage() {
                 onToggleTerminal={() => setTerminalOpen((v) => !v)}
                 aiOpen={aiOpen}
                 onToggleAi={() => setAiOpen((v) => !v)}
+                gitOpen={gitOpen}
+                onToggleGit={() => setGitOpen((v) => !v)}
                 onSave={handleSave}
                 isSaving={isSaving}
                 hasUnsavedChanges={openTabs.some((t) => t.isDirty)}
@@ -273,17 +370,40 @@ export default function ProjectPage() {
             />
 
             {/* ---- Workspace ------------------- */}
-            <div className="flex flex-1 overflow-hidden">
+            <div className="flex min-h-0 flex-1 overflow-hidden">
                 {/* Sidebar */}
-                <IdeSidebar
-                    project={project}
-                    open={sidebarOpen}
-                    onFileOpen={handleFileOpen}
-                    projectId={projectId}
-                />
+                {sidebarOpen && (
+                    <>
+                        <IdeSidebar
+                            key={fileTreeVersion}
+                            project={project}
+                            open={sidebarOpen}
+                            onFileOpen={handleFileOpen}
+                            projectId={projectId}
+                            width={sidebarWidth}
+                        />
+                        <div
+                            className="group relative z-10 h-full w-1 shrink-0 cursor-col-resize bg-border/60 transition-colors hover:bg-primary/70"
+                            role="separator"
+                            aria-orientation="vertical"
+                            title="Resize explorer"
+                            onPointerDown={(event) =>
+                                startPanelResize(event, {
+                                    axis: "x",
+                                    max: 520,
+                                    min: 180,
+                                    setSize: setSidebarWidth,
+                                    size: sidebarWidth,
+                                })
+                            }
+                        >
+                            <div className="absolute inset-y-0 -left-1 -right-1" />
+                        </div>
+                    </>
+                )}
 
                 {/* Editor + Terminal column */}
-                <div className="flex flex-1 flex-col overflow-hidden">
+                <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
                     <IdeEditorArea
                         openTabs={openTabs}
                         activeTabId={activeTabId}
@@ -292,18 +412,83 @@ export default function ProjectPage() {
                         onContentChange={handleContentChange}
                     />
                     {terminalOpen && (
-                        <IdeTerminalArea projectId={projectId} />
+                        <IdeTerminalArea
+                            projectId={projectId}
+                            height={terminalHeight}
+                            onResizeStart={(event) =>
+                                startPanelResize(event, {
+                                    axis: "y",
+                                    direction: -1,
+                                    max: 520,
+                                    min: 120,
+                                    setSize: setTerminalHeight,
+                                    size: terminalHeight,
+                                })
+                            }
+                        />
                     )}
                 </div>
                  {/* AI Chat Panel */}
                 {aiOpen && (
-                    <div className="w-80 shrink-0 flex flex-col overflow-hidden">
+                    <>
+                        <div
+                            className="group relative z-10 h-full w-1 shrink-0 cursor-col-resize bg-border/60 transition-colors hover:bg-violet-400/80"
+                            role="separator"
+                            aria-orientation="vertical"
+                            title="Resize AI chat"
+                            onPointerDown={(event) =>
+                                startPanelResize(event, {
+                                    axis: "x",
+                                    direction: -1,
+                                    max: 560,
+                                    min: 260,
+                                    setSize: setAiWidth,
+                                    size: aiWidth,
+                                })
+                            }
+                        >
+                            <div className="absolute inset-y-0 -left-1 -right-1" />
+                        </div>
+                        <div
+                            className="flex h-full shrink-0 flex-col overflow-hidden"
+                            style={{ width: aiWidth }}
+                        >
                         <IdeAiChat
                             projectId={projectId}
                             filePath={activeTabId}
                             onClose={() => setAiOpen(false)}
                         />
-                    </div>
+                        </div>
+                    </>
+                )}
+                {gitOpen && (
+                    <>
+                        <div
+                            className="group relative z-10 h-full w-1 shrink-0 cursor-col-resize bg-border/60 transition-colors hover:bg-primary/70"
+                            role="separator"
+                            aria-orientation="vertical"
+                            title="Resize source control"
+                            onPointerDown={(event) =>
+                                startPanelResize(event, {
+                                    axis: "x",
+                                    direction: -1,
+                                    max: 640,
+                                    min: 300,
+                                    setSize: setGitWidth,
+                                    size: gitWidth,
+                                })
+                            }
+                        >
+                            <div className="absolute inset-y-0 -left-1 -right-1" />
+                        </div>
+                        <IdeGitPanel
+                            projectId={projectId}
+                            onClose={() => setGitOpen(false)}
+                            onOpenDiff={handleOpenGitDiff}
+                            onRepositoryChanged={handleRepositoryChanged}
+                            width={gitWidth}
+                        />
+                    </>
                 )}
             </div>
         </div>
