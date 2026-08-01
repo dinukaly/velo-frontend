@@ -26,6 +26,7 @@ import type { GitDiff } from "@/types/git";
 import type { Project } from "@/types/project";
 import { toast } from "sonner";
 import { IdeAiChat } from "@/components/ide/IdeChat";
+import { IdeAgentPanel } from "@/components/ide/IdeAgentPanel";
 import { useTerminalStore } from "@/store/terminalStore";
 
 function clamp(value: number, min: number, max: number) {
@@ -106,6 +107,8 @@ export default function ProjectPage() {
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [terminalOpen, setTerminalOpen] = useState(true);
     const [aiOpen, setAiOpen] = useState(false);
+    /** 'chat' renders IdeAiChat; 'agent' renders IdeAgentPanel in the same slot */
+    const [aiMode, setAiMode] = useState<"chat" | "agent">("chat");
     const [gitOpen, setGitOpen] = useState(false);
     const [fileTreeVersion, setFileTreeVersion] = useState(0);
     const [sidebarWidth, setSidebarWidth] = useState(224);
@@ -360,7 +363,9 @@ export default function ProjectPage() {
                 terminalOpen={terminalOpen}
                 onToggleTerminal={() => setTerminalOpen((v) => !v)}
                 aiOpen={aiOpen}
-                onToggleAi={() => setAiOpen((v) => !v)}
+                onToggleAi={() => { setAiOpen((v) => !v); setAiMode("chat"); }}
+                aiMode={aiMode}
+                onOpenAgent={() => { setAiOpen(true); setAiMode("agent"); }}
                 gitOpen={gitOpen}
                 onToggleGit={() => setGitOpen((v) => !v)}
                 onSave={handleSave}
@@ -453,11 +458,20 @@ export default function ProjectPage() {
                             className="flex h-full shrink-0 flex-col overflow-hidden"
                             style={{ width: aiWidth }}
                         >
-                        <IdeAiChat
-                            projectId={projectId}
-                            filePath={activeTabId}
-                            onClose={() => setAiOpen(false)}
-                        />
+                        {aiMode === "agent" ? (
+                            <IdeAgentPanel
+                                projectId={projectId}
+                                filePath={activeTabId}
+                                onClose={() => setAiOpen(false)}
+                                onSwitchToChat={() => setAiMode("chat")}
+                            />
+                        ) : (
+                            <IdeAiChat
+                                projectId={projectId}
+                                filePath={activeTabId}
+                                onClose={() => setAiOpen(false)}
+                            />
+                        )}
                         </div>
                     </>
                 )}
