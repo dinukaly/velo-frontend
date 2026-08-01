@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import {
     ArrowLeft,
+    Bot,
     Play,
     PanelLeft,
     Terminal,
@@ -45,6 +46,10 @@ interface IdeTopBarProps {
     /** AI chat panel open state */
     aiOpen: boolean;
     onToggleAi: () => void;
+    /** Active AI mode ('chat' | 'agent') — controls which icon is highlighted */
+    aiMode: "chat" | "agent";
+    /** Called to open the panel in Agent mode */
+    onOpenAgent: () => void;
     /** Source control panel open state */
     gitOpen: boolean;
     onToggleGit: () => void;
@@ -66,6 +71,8 @@ export function IdeTopBar({
     onToggleTerminal,
     aiOpen,
     onToggleAi,
+    aiMode,
+    onOpenAgent,
     gitOpen,
     onToggleGit,
     onSave,
@@ -172,19 +179,38 @@ export function IdeTopBar({
                 </Button>
                        {/* AI Chat toggle */}
                 <Button
-                    variant={aiOpen ? "secondary" : "ghost"}
+                    variant={aiOpen && aiMode === "chat" ? "secondary" : "ghost"}
                     size="icon"
                     className={cn(
                         "h-7 w-7 relative",
-                        aiOpen
+                        aiOpen && aiMode === "chat"
                             ? "text-violet-400 bg-violet-500/10 hover:bg-violet-500/20"
                             : "text-muted-foreground hover:text-foreground"
                     )}
                     onClick={onToggleAi}
-                    title={aiOpen ? "Close AI chat" : "Open Velo AI"}
+                    title={aiOpen && aiMode === "chat" ? "Close AI chat" : "Open Velo AI Chat"}
                 >
                     <Sparkles className="h-4 w-4" />
-                    {aiOpen && (
+                    {aiOpen && aiMode === "chat" && (
+                        <span className="absolute bottom-0.5 right-0.5 h-1.5 w-1.5 rounded-full bg-violet-400 animate-pulse" />
+                    )}
+                </Button>
+
+                {/* Agent mode toggle */}
+                <Button
+                    variant={aiOpen && aiMode === "agent" ? "secondary" : "ghost"}
+                    size="icon"
+                    className={cn(
+                        "h-7 w-7 relative",
+                        aiOpen && aiMode === "agent"
+                            ? "text-violet-400 bg-violet-500/10 hover:bg-violet-500/20"
+                            : "text-muted-foreground hover:text-foreground"
+                    )}
+                    onClick={onOpenAgent}
+                    title={aiOpen && aiMode === "agent" ? "Close Agent" : "Open Velo Agent"}
+                >
+                    <Bot className="h-4 w-4" />
+                    {aiOpen && aiMode === "agent" && (
                         <span className="absolute bottom-0.5 right-0.5 h-1.5 w-1.5 rounded-full bg-violet-400 animate-pulse" />
                     )}
                 </Button>
