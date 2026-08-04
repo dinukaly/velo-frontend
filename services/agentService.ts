@@ -69,3 +69,40 @@ export async function decideHunk(
   );
   return res.data;
 }
+
+// ── Apply ─────────────────────────────────────────────────────────
+
+export type ApplyOutcome =
+  | "SUCCESS"
+  | "PARTIAL"
+  | "NOTHING_TO_APPLY"
+  | "PREFLIGHT_FAILED";
+
+export type FileApplyStatus = "APPLIED" | "SKIPPED" | "CONFLICT" | "ERROR";
+
+export interface ApplyFileResult {
+  filePath: string;
+  status: FileApplyStatus;
+  message?: string;
+}
+
+export interface ApplyResult {
+  proposalId: string;
+  runId: string;
+  outcome: ApplyOutcome;
+  summary: string;
+  fileResults: ApplyFileResult[];
+  filesApplied: number;
+  filesSkipped: number;
+  filesFailed: number;
+}
+
+/**
+ * Triggers the Safe-Apply pipeline on the backend.
+ * All hunks must be decided before calling this.
+ * Returns a structured per-file result summary.
+ */
+export async function applyProposal(runId: string): Promise<ApplyResult> {
+  const res = await api.post<ApplyResult>(`${BASE}/runs/${runId}/apply`);
+  return res.data;
+}

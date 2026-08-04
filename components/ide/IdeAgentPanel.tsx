@@ -34,7 +34,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useAgentStore } from "@/store/agentStore";
 import { useAgentSse } from "@/hooks/useAgentSse";
-import { createAgentRun, cancelAgentRun, decideHunk } from "@/services/agentService";
+import { createAgentRun, cancelAgentRun, decideHunk, applyProposal } from "@/services/agentService";
+import type { ApplyResult } from "@/services/agentService";
 import { AgentProgressPanel } from "./agent/AgentProgressPanel";
 import { AgentDiffViewer } from "./agent/AgentDiffViewer";
 import type { AgentPanelMode, AgentRunStatus, HunkDecision } from "@/types/agent";
@@ -109,6 +110,8 @@ export function IdeAgentPanel({
   // ── Input ──────────────────────────────────────────────────────
   const [input, setInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [applying, setApplying] = useState(false);
+  const [applyResult, setApplyResult] = useState<ApplyResult | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // ── Agent store ────────────────────────────────────────────────
@@ -190,6 +193,37 @@ export function IdeAgentPanel({
     },
     [run, updateHunkDecision, setProposal]
   );
+
+  /**
+   * Triggers the Safe-Apply pipeline on the backend.
+   * All hunks must be decided (none PENDING) before calling this.
+   */
+  async function handleApply() {
+    if (!run || applying) return;
+    if (pendingHunks > 0) {
+      toast.error(`${pendingHunks} hunk(s) still pending. Accept or reject all before applying.`);
+      return;
+    }
+    setApplying(true);
+    try {
+      const result = await applyProposal(run.id);
+      setApplyResult(result);
+      if (result.outcome === "SUCCESS") {
+        toast.success(`✅ ${result.filesApplied} file(s) applied successfully!`);
+      } else if (result.outcome === "PARTIAL") {
+        toast.warning(`⚠️ Partial apply: ${result.filesApplied} succeeded, ${result.filesFailed} failed.`);
+      } else if (result.outcome === "NOTHING_TO_APPLY") {
+        toast.info("Nothing to apply — all changes were rejected.");
+      } else {
+        toast.error("Apply failed: " + result.summary);
+      }
+    } catch (err) {
+      console.error("[Apply] Failed:", err);
+      toast.error("Apply failed. Check the console for details.");
+    } finally {
+      setApplying(false);
+    }
+  }
 
   function handleInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     setInput(e.target.value);
@@ -330,6 +364,25 @@ export function IdeAgentPanel({
                 disabled={!isWaitingReview}
               />
             </div>
+            {/* Apply Changes bar — shown once all hunks are decided */}
+            {pendingHunks === 0 && !applyResult && (
+              <div className="shrink-0 border-t border-white/[0.06] p-3">
+                <Button
+                  className="w-full h-8 text-[12px] font-semibold bg-emerald-600 hover:bg-emerald-700 text-white gap-2 transition-all"
+                  disabled={applying}
+                  onClick={handleApply}
+                >
+                  {applying ? (
+                    <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Applying…</>
+                  ) : (
+                    <><CheckCircle2 className="h-3.5 w-3.5" /> Apply Changes</>  
+                  )}
+                </Button>
+                <p className="mt-1.5 text-[10px] text-muted-foreground/50 text-center">
+                  {proposal.acceptedHunkCount} hunk(s) accepted · {proposal.rejectedHunkCount} rejected
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -338,6 +391,36 @@ export function IdeAgentPanel({
           <div className="flex items-center justify-center gap-2 py-10 text-[11px] text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin text-violet-400" />
             Loading proposal…
+          </div>
+        )}
+
+        {/* Apply result summary */}
+        {applyResult && (
+          <div className="px-3 pt-3 pb-4 flex flex-col gap-2">
+            <div className={cn(
+              "rounded-lg border p-3 text-[11px]",
+              applyResult.outcome === "SUCCESS" && "border-emerald-500/30 bg-emerald-500/5 text-emerald-300",
+              applyResult.outcome === "PARTIAL" && "border-amber-500/30 bg-amber-500/5 text-amber-300",
+              applyResult.outcome === "NOTHING_TO_APPLY" && "border-white/10 bg-white/[0.02] text-muted-foreground",
+              applyResult.outcome === "PREFLIGHT_FAILED" && "border-red-500/30 bg-red-500/5 text-red-400",
+            )}>
+              <p className="font-semibold mb-1">{applyResult.summary}</p>
+              <ul className="flex flex-col gap-0.5">
+                {applyResult.fileResults.map((fr) => (
+                  <li key={fr.filePath} className="flex items-center gap-1.5">
+                    <span className={cn(
+                      "h-1.5 w-1.5 rounded-full shrink-0",
+                      fr.status === "APPLIED" && "bg-emerald-400",
+                      fr.status === "SKIPPED" && "bg-muted-foreground/50",
+                      fr.status === "CONFLICT" && "bg-amber-400",
+                      fr.status === "ERROR" && "bg-red-400",
+                    )} />
+                    <span className="font-mono truncate">{fr.filePath}</span>
+                    <span className="shrink-0 text-muted-foreground/60">— {fr.message}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         )}
 
