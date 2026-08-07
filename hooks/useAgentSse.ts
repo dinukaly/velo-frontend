@@ -17,9 +17,8 @@ import { useAgentStore } from "@/store/agentStore";
 import { getProposal } from "@/services/agentService";
 import type { AgentRun, AgentStep, AgentRunStatus } from "@/types/agent";
 
-const SSE_BASE =
-  (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api") +
-  "/v1/ai/agent/runs";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api";
+const SSE_BASE = `${API_URL.replace(/\/$/, "")}/v1/ai/agent/runs`;
 
 const TERMINAL_STATUSES: AgentRunStatus[] = [
   "DONE",
