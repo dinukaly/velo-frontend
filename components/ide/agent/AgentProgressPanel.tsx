@@ -1,13 +1,5 @@
 "use client";
 
-/**
- * AgentProgressPanel.tsx
- *
- * Live progress timeline for an agent run.
- * Shows each step with status icon, label, detail text, and timing.
- * Warns the user when the agent emits warnings.
- */
-
 import { Bot, CheckCircle2, Circle, Loader2, XCircle, AlertTriangle, SkipForward } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AgentStep, AgentStepStatus } from "@/types/agent";

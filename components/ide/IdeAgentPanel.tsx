@@ -1,20 +1,5 @@
 "use client";
 
-/**
- * IdeAgentPanel.tsx
- *
- * The full Agent-mode panel mounted in the IDE's right sidebar.
- *
- * Sections:
- * 1. Mode toggle — switches between Chat and Agent tabs.
- * 2. Agent input — text area + Send to create a new run.
- * 3. Run status bar — shows current status pill and cancel button.
- * 4. Progress timeline — live steps from SSE (AgentProgressPanel).
- * 5. Proposal review — diff viewer + per-hunk decisions (AgentDiffViewer).
- *
- * State is fully managed by agentStore + useAgentSse hook.
- */
-
 import { useState, useRef, useCallback } from "react";
 import {
   Bot,
@@ -45,11 +30,9 @@ export interface IdeAgentPanelProps {
   filePath: string | null;
   selectedCode?: string;
   onClose: () => void;
-  /** Callback to switch parent panel back to Chat mode */
   onSwitchToChat?: () => void;
+  onApplySuccess?: () => void;
 }
-
-// ── Status pill helpers ───────────────────────────────────────────
 
 const STATUS_LABELS: Partial<Record<AgentRunStatus, string>> = {
   QUEUED: "Queued",
@@ -95,26 +78,21 @@ function StatusPill({ status }: { status: AgentRunStatus }) {
   );
 }
 
-// ── Main Component ────────────────────────────────────────────────
-
 export function IdeAgentPanel({
   projectId,
   filePath,
   selectedCode,
   onClose,
   onSwitchToChat,
+  onApplySuccess,
 }: IdeAgentPanelProps) {
-  // ── Panel mode toggle ──────────────────────────────────────────
   const [mode, setMode] = useState<AgentPanelMode>("agent");
-
-  // ── Input ──────────────────────────────────────────────────────
   const [input, setInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [applying, setApplying] = useState(false);
   const [applyResult, setApplyResult] = useState<ApplyResult | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // ── Agent store ────────────────────────────────────────────────
   const {
     run,
     runStatus,
@@ -128,10 +106,8 @@ export function IdeAgentPanel({
     reset,
   } = useAgentStore();
 
-  // ── SSE ────────────────────────────────────────────────────────
   useAgentSse({ runId: run?.id ?? null });
 
-  // ── Derived state ──────────────────────────────────────────────
   const isActive =
     runStatus &&
     !["DONE", "FAILED", "CANCELED", "REJECTED", "CONFLICTED"].includes(runStatus);
@@ -210,8 +186,10 @@ export function IdeAgentPanel({
       setApplyResult(result);
       if (result.outcome === "SUCCESS") {
         toast.success(`✅ ${result.filesApplied} file(s) applied successfully!`);
+        onApplySuccess?.();
       } else if (result.outcome === "PARTIAL") {
         toast.warning(`⚠️ Partial apply: ${result.filesApplied} succeeded, ${result.filesFailed} failed.`);
+        onApplySuccess?.();
       } else if (result.outcome === "NOTHING_TO_APPLY") {
         toast.info("Nothing to apply — all changes were rejected.");
       } else {
@@ -287,7 +265,7 @@ export function IdeAgentPanel({
         </div>
       </div>
 
-      {/* ── Mode toggle tabs (only if no active run) ── */}
+      {/* Mode toggle tabs */}
       {!run && onSwitchToChat && (
         <div className="flex shrink-0 border-b border-white/[0.06]">
           <button
@@ -312,9 +290,8 @@ export function IdeAgentPanel({
         </div>
       )}
 
-      {/* ── Body ── */}
+      {/* Main panel content */}
       <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10">
-        {/* No run yet → show intro */}
         {!run && (
           <div className="flex flex-col items-center gap-3 p-5 text-center">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/15 border border-violet-500/20">
@@ -328,7 +305,6 @@ export function IdeAgentPanel({
           </div>
         )}
 
-        {/* Active run → show progress */}
         {run && !isWaitingReview && (
           <AgentProgressPanel
             steps={steps}
@@ -337,10 +313,8 @@ export function IdeAgentPanel({
           />
         )}
 
-        {/* Waiting for review → show diff viewer */}
         {run && isWaitingReview && proposal && (
           <div className="flex flex-col gap-0">
-            {/* Proposal header */}
             <div className="px-3 pt-3 pb-2 border-b border-white/[0.06]">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-semibold text-amber-400">
@@ -364,7 +338,6 @@ export function IdeAgentPanel({
                 disabled={!isWaitingReview}
               />
             </div>
-            {/* Apply Changes bar — shown once all hunks are decided */}
             {pendingHunks === 0 && !applyResult && (
               <div className="shrink-0 border-t border-white/[0.06] p-3">
                 <Button
@@ -386,7 +359,6 @@ export function IdeAgentPanel({
           </div>
         )}
 
-        {/* Waiting for review but proposal not loaded yet */}
         {run && isWaitingReview && !proposal && (
           <div className="flex items-center justify-center gap-2 py-10 text-[11px] text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin text-violet-400" />
@@ -394,7 +366,6 @@ export function IdeAgentPanel({
           </div>
         )}
 
-        {/* Apply result summary */}
         {applyResult && (
           <div className="px-3 pt-3 pb-4 flex flex-col gap-2">
             <div className={cn(
@@ -424,7 +395,6 @@ export function IdeAgentPanel({
           </div>
         )}
 
-        {/* Done / Failed state */}
         {run && (runStatus === "DONE" || runStatus === "FAILED") && (
           <div className="px-3 pt-3">
             <AgentProgressPanel
@@ -442,7 +412,6 @@ export function IdeAgentPanel({
         )}
       </div>
 
-      {/* ── Input footer ── */}
       {!isActive && (
         <div className="shrink-0 border-t border-white/[0.08] p-2.5">
           <div className="flex items-end gap-2 rounded-xl bg-white/[0.04] border border-white/[0.08] px-3 py-2 focus-within:border-violet-500/40 transition-colors">

@@ -1,18 +1,5 @@
 "use client";
 
-/**
- * AgentDiffViewer.tsx
- *
- * Diff viewer for the proposal review panel.
- *
- * Renders a unified diff for each hunk with:
- * - Green (+) / red (-) line colouring
- * - Accept / Reject buttons per hunk
- * - Dependency-group badge (shows when hunks share a changeGroupKey)
- * - Decision badge overlay (ACCEPTED / REJECTED / SKIPPED) for decided hunks
- * - File-level rationale header
- */
-
 import { useState } from "react";
 import { Check, X, Link2, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,8 +11,6 @@ interface AgentDiffViewerProps {
   onDecide: (hunkId: string, decision: HunkDecision) => Promise<void>;
   disabled?: boolean;
 }
-
-// ── Hunk diff renderer ────────────────────────────────────────────
 
 function DiffLines({ snippet }: { snippet: string }) {
   const lines = snippet.split("\n");
@@ -70,8 +55,6 @@ function DiffLines({ snippet }: { snippet: string }) {
   );
 }
 
-// ── Decision badge ────────────────────────────────────────────────
-
 function DecisionBadge({ decision }: { decision: HunkDecision }) {
   if (decision === "PENDING") return null;
   return (
@@ -89,8 +72,6 @@ function DecisionBadge({ decision }: { decision: HunkDecision }) {
     </span>
   );
 }
-
-// ── Single hunk card ──────────────────────────────────────────────
 
 function HunkCard({
   hunk,
@@ -191,8 +172,6 @@ function HunkCard({
   );
 }
 
-// ── File section ──────────────────────────────────────────────────
-
 function FileSection({
   file,
   onDecide,
@@ -264,8 +243,6 @@ function FileSection({
     </div>
   );
 }
-
-// ── Main export ───────────────────────────────────────────────────
 
 export function AgentDiffViewer({ files, onDecide, disabled }: AgentDiffViewerProps) {
   if (!files || files.length === 0) {

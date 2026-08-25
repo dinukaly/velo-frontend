@@ -119,6 +119,8 @@ export default function ProjectPage() {
     // --- tab state ------------
     const [openTabs, setOpenTabs] = useState<FileTab[]>([]);
     const [activeTabId, setActiveTabId] = useState<string | null>(null);
+    /** Current text selection in Monaco — passed to the agent panel as context. */
+    const [selectedCode, setSelectedCode] = useState<string>("");
 
     const [isSaving, setIsSaving] = useState(false);
 
@@ -415,6 +417,7 @@ export default function ProjectPage() {
                         onTabSelect={setActiveTabId}
                         onTabClose={handleTabClose}
                         onContentChange={handleContentChange}
+                        onSelectionChange={setSelectedCode}
                     />
                     {terminalOpen && (
                         <IdeTerminalArea
@@ -462,8 +465,27 @@ export default function ProjectPage() {
                             <IdeAgentPanel
                                 projectId={projectId}
                                 filePath={activeTabId}
+                                selectedCode={selectedCode}
                                 onClose={() => setAiOpen(false)}
                                 onSwitchToChat={() => setAiMode("chat")}
+                                onApplySuccess={() => {
+                                    setFileTreeVersion((v) => v + 1);
+                                    // Reload open tab contents after changes are applied
+                                    const tabsToReload = openTabs.filter((t) => t.tabType !== "diff");
+                                    tabsToReload.forEach(async (tab) => {
+                                        try {
+                                            const content = await import("@/services/fileService")
+                                                .then((m) => m.loadFileContent(projectId, tab.id));
+                                            setOpenTabs((prev) =>
+                                                prev.map((t) =>
+                                                    t.id === tab.id ? { ...t, content, isDirty: false } : t
+                                                )
+                                            );
+                                        } catch {
+                                            // Keep existing tab content if reload fails
+                                        }
+                                    });
+                                }}
                             />
                         ) : (
                             <IdeAiChat

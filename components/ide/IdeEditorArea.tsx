@@ -147,6 +147,8 @@ interface IdeEditorAreaProps {
     onTabSelect: (id: string) => void;
     onTabClose: (id: string) => void;
     onContentChange: (id: string, content: string) => void;
+    /** Called whenever the Monaco selection changes (debounced at 200ms). */
+    onSelectionChange?: (selectedText: string) => void;
 }
 
 export function IdeEditorArea({
@@ -155,6 +157,7 @@ export function IdeEditorArea({
     onTabSelect,
     onTabClose,
     onContentChange,
+    onSelectionChange,
 }: IdeEditorAreaProps) {
     /** Reference to the Monaco editor instance — persists across tab switches. */
     const editorRef = useRef<MonacoEditorNs.IStandaloneCodeEditor | null>(null);
@@ -230,6 +233,23 @@ export function IdeEditorArea({
                     onContentChange(tabId, editor.getValue());
                 }, 300);
             }
+        });
+
+        // Track text selection for the agent panel (debounced to avoid noise)
+        let selectionDebounce: ReturnType<typeof setTimeout> | null = null;
+        editor.onDidChangeCursorSelection(() => {
+            if (!onSelectionChange) return;
+            if (selectionDebounce) clearTimeout(selectionDebounce);
+            selectionDebounce = setTimeout(() => {
+                const selection = editor.getSelection();
+                if (selection && !selection.isEmpty()) {
+                    const model = editor.getModel();
+                    const text = model?.getValueInRange(selection) ?? "";
+                    onSelectionChange(text);
+                } else {
+                    onSelectionChange("");
+                }
+            }, 200);
         });
     };
 
