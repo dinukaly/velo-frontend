@@ -50,6 +50,9 @@ export function useAgentSse({ runId, enabled = true }: UseAgentSseOptions) {
   const esRef = useRef<EventSource | null>(null);
   const backoffRef = useRef(1000);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Tracks the latest run status seen during SSE replay/live, to guard
+  // against stale replayed events triggering proposal fetches after DONE.
+  const latestStatusRef = useRef<AgentRunStatus | null>(null);
 
   // Initial sync: fetch current run state in case events were missed before hook mount
   useEffect(() => {
@@ -59,6 +62,7 @@ export function useAgentSse({ runId, enabled = true }: UseAgentSseOptions) {
       .then((runDetail) => {
         if (runDetail.status) {
           updateRunStatus(runDetail.status);
+          latestStatusRef.current = runDetail.status;
         }
         if (runDetail.steps && runDetail.steps.length > 0) {
           runDetail.steps.forEach((st) => upsertStep(st));
@@ -87,6 +91,9 @@ export function useAgentSse({ runId, enabled = true }: UseAgentSseOptions) {
 
     // Don't open a new SSE connection if run is already terminal
     if (runStatus && TERMINAL_STATUSES.includes(runStatus)) return;
+
+    // Reset the local status tracker for this connection
+    latestStatusRef.current = null;
 
     function connect() {
       if (esRef.current) {
@@ -119,8 +126,14 @@ export function useAgentSse({ runId, enabled = true }: UseAgentSseOptions) {
         try {
           const data = JSON.parse(e.data) as { status: AgentRunStatus };
           updateRunStatus(data.status);
+          latestStatusRef.current = data.status;
 
-          if (data.status === "WAITING_FOR_APPROVAL") {
+          // Only fetch proposal if run is currently awaiting approval —
+          // not if this is a replayed event from a run that later went DONE.
+          if (
+            data.status === "WAITING_FOR_APPROVAL" &&
+            !TERMINAL_STATUSES.includes(latestStatusRef.current)
+          ) {
             getProposal(runId!)
               .then((p) => setProposal(p))
               .catch((err) => console.error("[SSE] Failed to fetch proposal on status:", err));
@@ -152,7 +165,16 @@ export function useAgentSse({ runId, enabled = true }: UseAgentSseOptions) {
       // ── proposal.created ─────────────────────────────────────────
       es.addEventListener("proposal.created", async () => {
         try {
+          // Skip if a terminal status has already been seen during replay —
+          // this means we're replaying history for an already-completed run.
+          if (
+            latestStatusRef.current &&
+            TERMINAL_STATUSES.includes(latestStatusRef.current)
+          ) {
+            return;
+          }
           updateRunStatus("WAITING_FOR_APPROVAL");
+          latestStatusRef.current = "WAITING_FOR_APPROVAL";
           // Fetch the full proposal tree from the API
           const proposal = await getProposal(runId!);
           setProposal(proposal);
@@ -174,6 +196,7 @@ export function useAgentSse({ runId, enabled = true }: UseAgentSseOptions) {
       // ── run.completed / run.failed ───────────────────────────────
       const handleTerminal = (status: AgentRunStatus) => () => {
         updateRunStatus(status);
+        latestStatusRef.current = status;
         setSseConnected(false);
         es.close();
         esRef.current = null;
