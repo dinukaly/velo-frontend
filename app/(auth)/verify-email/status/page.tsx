@@ -22,7 +22,7 @@ function VerifyStatusContent() {
 
   return (
     <Card className="w-full max-w-sm border-border bg-card shadow-xl overflow-hidden text-center">
-      <CardHeader className="space-y-1 pb-6">
+      <CardHeader className="space-y-1">
         <div className="flex justify-center mb-4">
           {isSuccess ? (
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-500/10 border border-green-500/20 text-green-500">
@@ -52,7 +52,7 @@ function VerifyStatusContent() {
         </p>
       </CardContent>
 
-      <CardFooter className="flex flex-col space-y-4">
+      <CardFooter className="flex flex-col gap-4">
         {isSuccess ? (
           <Button className="w-full" asChild>
             <Link href="/login">Sign In</Link>

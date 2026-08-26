@@ -101,7 +101,7 @@ export default function ForgotPasswordPage() {
   if (submittedEmail) {
     return (
       <Card className="w-full max-w-sm border-border bg-card shadow-xl overflow-hidden text-center">
-        <CardHeader className="space-y-1 pb-6">
+        <CardHeader className="space-y-1">
           <div className="flex justify-center mb-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 text-primary">
               <Mail className="h-6 w-6" />
@@ -128,7 +128,7 @@ export default function ForgotPasswordPage() {
           </p>
         </CardContent>
 
-        <CardFooter className="flex flex-col space-y-4">
+        <CardFooter className="flex flex-col gap-4">
           <Button
             variant="outline"
             className="w-full"
@@ -165,7 +165,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <Card className="w-full max-w-sm border-border bg-card shadow-xl overflow-hidden">
-      <CardHeader className="space-y-1 text-center pb-6">
+      <CardHeader className="space-y-1 text-center">
         <div className="flex justify-center mb-4">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 text-primary">
             <Mail className="h-6 w-6" />
@@ -179,7 +179,7 @@ export default function ForgotPasswordPage() {
         </CardDescription>
       </CardHeader>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
         <CardContent className="space-y-4">
           <FormInput
             label="Email"
@@ -196,7 +196,7 @@ export default function ForgotPasswordPage() {
             </p>
           )}
         </CardContent>
-        <CardFooter className="flex flex-col space-y-4">
+        <CardFooter className="flex flex-col gap-4">
           <Button className="w-full" type="submit" disabled={isLoading}>
             {isLoading ? (
               <>
