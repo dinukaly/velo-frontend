@@ -69,8 +69,10 @@ export function useAgentSse({ runId, enabled = true }: UseAgentSseOptions) {
         }
         if (runDetail.status === "WAITING_FOR_APPROVAL") {
           getProposal(runId)
-            .then((p) => setProposal(p))
-            .catch((err) => console.error("[useAgentSse] Initial proposal fetch failed:", err));
+            .then((p) => {
+              if (p) setProposal(p);
+            })
+            .catch((err) => console.warn("[useAgentSse] Initial proposal fetch failed:", err));
         }
       })
       .catch((err) => console.warn("[useAgentSse] Initial run sync failed:", err));
@@ -81,8 +83,10 @@ export function useAgentSse({ runId, enabled = true }: UseAgentSseOptions) {
     if (!runId || !enabled) return;
     if (runStatus === "WAITING_FOR_APPROVAL" && !proposal) {
       getProposal(runId)
-        .then((p) => setProposal(p))
-        .catch((err) => console.error("[useAgentSse] Fallback proposal fetch failed:", err));
+        .then((p) => {
+          if (p) setProposal(p);
+        })
+        .catch((err) => console.warn("[useAgentSse] Fallback proposal fetch failed:", err));
     }
   }, [runId, enabled, runStatus, proposal, setProposal]);
 
@@ -135,8 +139,10 @@ export function useAgentSse({ runId, enabled = true }: UseAgentSseOptions) {
             !TERMINAL_STATUSES.includes(latestStatusRef.current)
           ) {
             getProposal(runId!)
-              .then((p) => setProposal(p))
-              .catch((err) => console.error("[SSE] Failed to fetch proposal on status:", err));
+              .then((p) => {
+                if (p) setProposal(p);
+              })
+              .catch((err) => console.warn("[SSE] Failed to fetch proposal on status:", err));
           }
 
           // Close SSE when run reaches a terminal state
@@ -177,9 +183,11 @@ export function useAgentSse({ runId, enabled = true }: UseAgentSseOptions) {
           latestStatusRef.current = "WAITING_FOR_APPROVAL";
           // Fetch the full proposal tree from the API
           const proposal = await getProposal(runId!);
-          setProposal(proposal);
+          if (proposal) {
+            setProposal(proposal);
+          }
         } catch (err) {
-          console.error("[SSE] Failed to fetch proposal:", err);
+          console.warn("[SSE] Failed to fetch proposal:", err);
         }
       });
 

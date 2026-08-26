@@ -53,11 +53,18 @@ export async function cancelAgentRun(runId: string): Promise<void> {
 
 /**
  * Fetches the full proposal for a run that is in WAITING_FOR_APPROVAL state.
- * Returns the proposal with all files and hunks.
+ * Returns the proposal with all files and hunks, or null if no proposal exists.
  */
-export async function getProposal(runId: string): Promise<Proposal> {
-  const res = await api.get<Proposal>(`${BASE}/runs/${runId}/proposal`);
-  return res.data;
+export async function getProposal(runId: string): Promise<Proposal | null> {
+  try {
+    const res = await api.get<Proposal>(`${BASE}/runs/${runId}/proposal`);
+    return res.data;
+  } catch (err: any) {
+    if (err?.response?.status === 404) {
+      return null;
+    }
+    throw err;
+  }
 }
 
 /**
