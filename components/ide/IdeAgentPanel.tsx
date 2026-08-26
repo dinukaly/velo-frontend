@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import {
   Bot,
   Send,
@@ -19,7 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useAgentStore } from "@/store/agentStore";
 import { useAgentSse } from "@/hooks/useAgentSse";
-import { createAgentRun, cancelAgentRun, decideHunk, applyProposal } from "@/services/agentService";
+import { createAgentRun, cancelAgentRun, decideHunk, applyProposal, getActiveAgentRun } from "@/services/agentService";
 import type { ApplyResult } from "@/services/agentService";
 import { AgentProgressPanel } from "./agent/AgentProgressPanel";
 import { AgentDiffViewer } from "./agent/AgentDiffViewer";
@@ -105,6 +105,21 @@ export function IdeAgentPanel({
     updateHunkDecision,
     reset,
   } = useAgentStore();
+
+  // Restore active run session on mount
+  useEffect(() => {
+    if (!projectId || run) return;
+    
+    getActiveAgentRun(projectId)
+      .then((activeRun) => {
+        if (activeRun) {
+          setRun(activeRun);
+        }
+      })
+      .catch((err) => {
+        console.warn("[IdeAgentPanel] Failed to fetch active run:", err);
+      });
+  }, [projectId, run, setRun]);
 
   useAgentSse({ runId: run?.id ?? null });
 

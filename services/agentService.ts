@@ -38,6 +38,12 @@ export async function getAgentRun(runId: string): Promise<AgentRun> {
   return res.data;
 }
 
+/** Fetches the currently active run for a project, if any. */
+export async function getActiveAgentRun(projectId: string): Promise<AgentRun | null> {
+  const res = await api.get<AgentRun | null>(`${BASE}/runs/active`, { params: { projectId } });
+  return res.data;
+}
+
 /** Cancels a running or queued agent run. */
 export async function cancelAgentRun(runId: string): Promise<void> {
   await api.post(`${BASE}/runs/${runId}/cancel`);

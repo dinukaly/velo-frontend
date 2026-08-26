@@ -14,7 +14,7 @@
 
 import { useEffect, useRef } from "react";
 import { useAgentStore } from "@/store/agentStore";
-import { getProposal } from "@/services/agentService";
+import { getProposal, getAgentRun } from "@/services/agentService";
 import type { AgentRun, AgentStep, AgentRunStatus } from "@/types/agent";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api";
@@ -44,11 +44,43 @@ export function useAgentSse({ runId, enabled = true }: UseAgentSseOptions) {
     addWarning,
     setSseConnected,
     runStatus,
+    proposal,
   } = useAgentStore();
 
   const esRef = useRef<EventSource | null>(null);
   const backoffRef = useRef(1000);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Initial sync: fetch current run state in case events were missed before hook mount
+  useEffect(() => {
+    if (!runId || !enabled) return;
+
+    getAgentRun(runId)
+      .then((runDetail) => {
+        if (runDetail.status) {
+          updateRunStatus(runDetail.status);
+        }
+        if (runDetail.steps && runDetail.steps.length > 0) {
+          runDetail.steps.forEach((st) => upsertStep(st));
+        }
+        if (runDetail.status === "WAITING_FOR_APPROVAL") {
+          getProposal(runId)
+            .then((p) => setProposal(p))
+            .catch((err) => console.error("[useAgentSse] Initial proposal fetch failed:", err));
+        }
+      })
+      .catch((err) => console.warn("[useAgentSse] Initial run sync failed:", err));
+  }, [runId, enabled, updateRunStatus, upsertStep, setProposal]);
+
+  // Fallback: If the run is in WAITING_FOR_APPROVAL but proposal isn't loaded, fetch it directly
+  useEffect(() => {
+    if (!runId || !enabled) return;
+    if (runStatus === "WAITING_FOR_APPROVAL" && !proposal) {
+      getProposal(runId)
+        .then((p) => setProposal(p))
+        .catch((err) => console.error("[useAgentSse] Fallback proposal fetch failed:", err));
+    }
+  }, [runId, enabled, runStatus, proposal, setProposal]);
 
   useEffect(() => {
     if (!runId || !enabled) return;
@@ -88,6 +120,12 @@ export function useAgentSse({ runId, enabled = true }: UseAgentSseOptions) {
           const data = JSON.parse(e.data) as { status: AgentRunStatus };
           updateRunStatus(data.status);
 
+          if (data.status === "WAITING_FOR_APPROVAL") {
+            getProposal(runId!)
+              .then((p) => setProposal(p))
+              .catch((err) => console.error("[SSE] Failed to fetch proposal on status:", err));
+          }
+
           // Close SSE when run reaches a terminal state
           if (TERMINAL_STATUSES.includes(data.status)) {
             setSseConnected(false);
@@ -114,6 +152,7 @@ export function useAgentSse({ runId, enabled = true }: UseAgentSseOptions) {
       // ── proposal.created ─────────────────────────────────────────
       es.addEventListener("proposal.created", async () => {
         try {
+          updateRunStatus("WAITING_FOR_APPROVAL");
           // Fetch the full proposal tree from the API
           const proposal = await getProposal(runId!);
           setProposal(proposal);
