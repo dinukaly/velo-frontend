@@ -64,8 +64,8 @@ export interface AgentStep {
   sequence: number;
   type: AgentStepType;
   status: AgentStepStatus;
-  label: string;
-  detail?: string;
+  title: string;       // matches backend AgentStepDTO.title
+  summary?: string;    // matches backend AgentStepDTO.summary
   startedAt?: string;
   completedAt?: string;
 }

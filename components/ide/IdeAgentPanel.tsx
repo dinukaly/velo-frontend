@@ -99,7 +99,6 @@ export function IdeAgentPanel({
     steps,
     proposal,
     warnings,
-    sseConnected,
     setRun,
     setProposal,
     updateHunkDecision,
@@ -245,29 +244,32 @@ export function IdeAgentPanel({
           <span className="text-xs font-semibold text-foreground">Velo Agent</span>
           {runStatus && <StatusPill status={runStatus} />}
         </div>
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-1">
+          {/* Cancel run — text label so it's clearly distinct from the close button */}
           {isActive && (
             <Button
               variant="ghost"
-              size="icon"
-              className="h-6 w-6 text-muted-foreground hover:text-red-400"
-              title="Cancel run"
+              size="sm"
+              className="h-6 px-2 text-[11px] text-muted-foreground hover:text-red-400 hover:bg-red-500/10"
+              title="Cancel this agent run"
               onClick={handleCancel}
             >
-              <X className="h-3.5 w-3.5" />
+              Cancel
             </Button>
           )}
+          {/* Reset to new run — after a completed/failed run */}
           {run && !isActive && (
             <Button
               variant="ghost"
               size="icon"
               className="h-6 w-6 text-muted-foreground hover:text-foreground"
-              title="Start new run"
+              title="Start a new run"
               onClick={reset}
             >
               <RotateCcw className="h-3.5 w-3.5" />
             </Button>
           )}
+          {/* Close panel */}
           <Button
             variant="ghost"
             size="icon"
@@ -320,12 +322,9 @@ export function IdeAgentPanel({
           </div>
         )}
 
+        {/* Show step progress for all active + terminal states (not while reviewing proposal) */}
         {run && !isWaitingReview && (
-          <AgentProgressPanel
-            steps={steps}
-            warnings={warnings}
-            sseConnected={sseConnected}
-          />
+          <AgentProgressPanel steps={steps} warnings={warnings} />
         )}
 
         {run && isWaitingReview && proposal && (
@@ -410,19 +409,13 @@ export function IdeAgentPanel({
           </div>
         )}
 
-        {run && (runStatus === "DONE" || runStatus === "FAILED") && (
-          <div className="px-3 pt-3">
-            <AgentProgressPanel
-              steps={steps}
-              warnings={warnings}
-              sseConnected={false}
-            />
-            {run.errorMessage && (
-              <div className="mt-3 rounded-lg border border-red-500/20 bg-red-500/5 p-3 text-[11px] text-red-400">
-                <span className="font-semibold">Error: </span>
-                {run.errorMessage}
-              </div>
-            )}
+        {/* Error message for failed runs — steps already shown by the block above */}
+        {run && runStatus === "FAILED" && run.errorMessage && (
+          <div className="px-3 pb-3">
+            <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-3 text-[11px] text-red-400">
+              <span className="font-semibold">Error: </span>
+              {run.errorMessage}
+            </div>
           </div>
         )}
       </div>
