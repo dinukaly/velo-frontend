@@ -26,6 +26,7 @@ import type { GitDiff } from "@/types/git";
 import type { Project } from "@/types/project";
 import { toast } from "sonner";
 import { IdeAiChat } from "@/components/ide/IdeChat";
+import { IdeAgentPanel } from "@/components/ide/IdeAgentPanel";
 import { useTerminalStore } from "@/store/terminalStore";
 
 function clamp(value: number, min: number, max: number) {
@@ -106,6 +107,8 @@ export default function ProjectPage() {
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [terminalOpen, setTerminalOpen] = useState(true);
     const [aiOpen, setAiOpen] = useState(false);
+    /** 'chat' renders IdeAiChat; 'agent' renders IdeAgentPanel in the same slot */
+    const [aiMode, setAiMode] = useState<"chat" | "agent">("chat");
     const [gitOpen, setGitOpen] = useState(false);
     const [fileTreeVersion, setFileTreeVersion] = useState(0);
     const [sidebarWidth, setSidebarWidth] = useState(224);
@@ -116,6 +119,8 @@ export default function ProjectPage() {
     // --- tab state ------------
     const [openTabs, setOpenTabs] = useState<FileTab[]>([]);
     const [activeTabId, setActiveTabId] = useState<string | null>(null);
+    /** Current text selection in Monaco — passed to the agent panel as context. */
+    const [selectedCode, setSelectedCode] = useState<string>("");
 
     const [isSaving, setIsSaving] = useState(false);
 
@@ -360,7 +365,9 @@ export default function ProjectPage() {
                 terminalOpen={terminalOpen}
                 onToggleTerminal={() => setTerminalOpen((v) => !v)}
                 aiOpen={aiOpen}
-                onToggleAi={() => setAiOpen((v) => !v)}
+                onToggleAi={() => { setAiOpen((v) => !v); setAiMode("chat"); }}
+                aiMode={aiMode}
+                onOpenAgent={() => { setAiOpen(true); setAiMode("agent"); }}
                 gitOpen={gitOpen}
                 onToggleGit={() => setGitOpen((v) => !v)}
                 onSave={handleSave}
@@ -410,6 +417,7 @@ export default function ProjectPage() {
                         onTabSelect={setActiveTabId}
                         onTabClose={handleTabClose}
                         onContentChange={handleContentChange}
+                        onSelectionChange={setSelectedCode}
                     />
                     {terminalOpen && (
                         <IdeTerminalArea
@@ -453,11 +461,39 @@ export default function ProjectPage() {
                             className="flex h-full shrink-0 flex-col overflow-hidden"
                             style={{ width: aiWidth }}
                         >
-                        <IdeAiChat
-                            projectId={projectId}
-                            filePath={activeTabId}
-                            onClose={() => setAiOpen(false)}
-                        />
+                        {aiMode === "agent" ? (
+                            <IdeAgentPanel
+                                projectId={projectId}
+                                filePath={activeTabId}
+                                selectedCode={selectedCode}
+                                onClose={() => setAiOpen(false)}
+                                onSwitchToChat={() => setAiMode("chat")}
+                                onApplySuccess={() => {
+                                    setFileTreeVersion((v) => v + 1);
+                                    // Reload open tab contents after changes are applied
+                                    const tabsToReload = openTabs.filter((t) => t.tabType !== "diff");
+                                    tabsToReload.forEach(async (tab) => {
+                                        try {
+                                            const content = await import("@/services/fileService")
+                                                .then((m) => m.loadFileContent(projectId, tab.id));
+                                            setOpenTabs((prev) =>
+                                                prev.map((t) =>
+                                                    t.id === tab.id ? { ...t, content, isDirty: false } : t
+                                                )
+                                            );
+                                        } catch {
+                                            // Keep existing tab content if reload fails
+                                        }
+                                    });
+                                }}
+                            />
+                        ) : (
+                            <IdeAiChat
+                                projectId={projectId}
+                                filePath={activeTabId}
+                                onClose={() => setAiOpen(false)}
+                            />
+                        )}
                         </div>
                     </>
                 )}

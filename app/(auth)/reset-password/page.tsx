@@ -71,7 +71,7 @@ function ResetPasswordContent() {
   if (!token || tokenError) {
     return (
       <Card className="w-full max-w-sm border-border bg-card shadow-xl overflow-hidden text-center">
-        <CardHeader className="space-y-1 pb-6">
+        <CardHeader className="space-y-1">
           <div className="flex justify-center mb-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500">
               <AlertTriangle className="h-6 w-6" />
@@ -91,7 +91,7 @@ function ResetPasswordContent() {
           </p>
         </CardContent>
 
-        <CardFooter className="flex flex-col space-y-4">
+        <CardFooter className="flex flex-col gap-4">
           <Button className="w-full" asChild>
             <Link href="/forgot-password">Request new reset link</Link>
           </Button>
@@ -106,7 +106,7 @@ function ResetPasswordContent() {
   if (isSuccess) {
     return (
       <Card className="w-full max-w-sm border-border bg-card shadow-xl overflow-hidden text-center">
-        <CardHeader className="space-y-1 pb-6">
+        <CardHeader className="space-y-1">
           <div className="flex justify-center mb-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-500/10 border border-green-500/20 text-green-500">
               <CheckCircle2 className="h-6 w-6" />
@@ -137,7 +137,7 @@ function ResetPasswordContent() {
 
   return (
     <Card className="w-full max-w-sm border-border bg-card shadow-xl overflow-hidden">
-      <CardHeader className="space-y-1 text-center pb-6">
+      <CardHeader className="space-y-1 text-center">
         <div className="flex justify-center mb-4">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 text-primary">
             <KeyRound className="h-6 w-6" />
@@ -151,7 +151,7 @@ function ResetPasswordContent() {
         </CardDescription>
       </CardHeader>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
         <CardContent className="space-y-4">
           <FormInput
             label="New Password"
@@ -179,7 +179,7 @@ function ResetPasswordContent() {
             </p>
           )}
         </CardContent>
-        <CardFooter className="flex flex-col space-y-4">
+        <CardFooter className="flex flex-col gap-4">
           <Button className="w-full" type="submit" disabled={isLoading}>
             {isLoading ? (
               <>

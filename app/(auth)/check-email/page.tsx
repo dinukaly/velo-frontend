@@ -60,7 +60,7 @@ export default function CheckEmailPage() {
 
   return (
     <Card className="w-full max-w-sm border-border bg-card shadow-xl overflow-hidden text-center">
-      <CardHeader className="space-y-1 pb-6">
+      <CardHeader className="space-y-1">
         <div className="flex justify-center mb-4">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 text-primary">
             <Mail className="h-6 w-6" />
@@ -85,7 +85,7 @@ export default function CheckEmailPage() {
         </p>
       </CardContent>
 
-      <CardFooter className="flex flex-col space-y-4">
+      <CardFooter className="flex flex-col gap-4">
         <Button 
           variant="outline" 
           className="w-full" 

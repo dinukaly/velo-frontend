@@ -199,9 +199,9 @@ export function useTerminalWebSocket({
             const attempt = attemptsRef.current;
 
             // If the closure was due to a policy violation (likely expired token),
-            // trigger a dummy request to force a token refresh via Axios.
+            // trigger a request to force a token refresh via Axios interceptor.
             if (event.code === 1008) {
-                api.get("/v1/auth/session").catch(() => {});
+                api.get("/v1/auth/me").catch(() => {});
             }
 
             if (attempt >= MAX_RECONNECT_ATTEMPTS) {
