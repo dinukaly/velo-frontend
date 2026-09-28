@@ -166,8 +166,8 @@ export function IdeEditorArea({
     /** Stable ref that always holds the latest activeTabId for the change handler. */
     const activeTabIdRef = useRef<string | null>(activeTabId);
     const openTabsRef = useRef<FileTab[]>(openTabs);
-    /** Debounce timer for content changes. */
-    const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const previousTabIdRef = useRef<string | null>(null);
+    const updatingFromTabRef = useRef(false);
 
     const activeTab = openTabs.find((t) => t.id === activeTabId) ?? null;
 
@@ -180,7 +180,7 @@ export function IdeEditorArea({
         openTabsRef.current = openTabs;
     }, [openTabs]);
 
-    // When the active tab changes: update content + language in the existing editor
+    // Keep Monaco in sync when the selected tab changes or its content is reloaded from disk.
     useEffect(() => {
         const editor = editorRef.current;
         const monacoInst = monacoRef.current;
@@ -190,9 +190,16 @@ export function IdeEditorArea({
             return;
         }
 
-        // Update content only if it differs (avoids cursor jump on re-render)
-        if (editor.getValue() !== activeTab.content) {
-            editor.setValue(activeTab.content);
+        const tabChanged = previousTabIdRef.current !== activeTabId;
+        previousTabIdRef.current = activeTabId;
+
+        if ((tabChanged || !activeTab.isDirty) && editor.getValue() !== activeTab.content) {
+            updatingFromTabRef.current = true;
+            try {
+                editor.setValue(activeTab.content);
+            } finally {
+                updatingFromTabRef.current = false;
+            }
         }
 
         // Update language model
@@ -201,11 +208,12 @@ export function IdeEditorArea({
             monacoInst.editor.setModelLanguage(model, activeTab.language);
         }
 
-        // Move cursor to top of file on tab switch
-        editor.setScrollTop(0);
-        editor.setPosition({ lineNumber: 1, column: 1 });
-        editor.focus();
-    }, [activeTabId]); // eslint-disable-line react-hooks/exhaustive-deps
+        if (tabChanged) {
+            editor.setScrollTop(0);
+            editor.setPosition({ lineNumber: 1, column: 1 });
+            editor.focus();
+        }
+    }, [activeTabId, activeTab?.content, activeTab?.language, activeTab?.tabType]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleMount: OnMount = (editor, monaco) => {
         editorRef.current = editor;
@@ -225,13 +233,11 @@ export function IdeEditorArea({
 
         // Track content changes for dirty state
         editor.onDidChangeModelContent(() => {
+            if (updatingFromTabRef.current) return;
             const tabId = activeTabIdRef.current;
             const tab = openTabsRef.current.find((t) => t.id === tabId);
             if (tabId && tab?.tabType !== "diff") {
-                if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-                typingTimeoutRef.current = setTimeout(() => {
-                    onContentChange(tabId, editor.getValue());
-                }, 300);
+                onContentChange(tabId, editor.getValue());
             }
         });
 
