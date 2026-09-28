@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import {
   Check,
   ChevronDown,
@@ -32,10 +32,10 @@ const codeLines: CodeToken[][] = [
 const lineLengths = codeLines.map((line) => line.reduce((length, token) => length + token.text.length, 0));
 const lineStarts = lineLengths.map((_, index) => lineLengths.slice(0, index).reduce((total, length) => total + length + 1, 0));
 const totalChars = lineLengths.reduce((total, length) => total + length + 1, 0);
-const typingFrames = Math.ceil(totalChars / 2);
-const terminalFrame = typingFrames + 12;
-const reviewFrame = terminalFrame + 18;
-const cycleFrames = reviewFrame + 110;
+const typingFrames = Math.ceil(totalChars / 3);
+const terminalFrame = typingFrames + 8;
+const reviewFrame = terminalFrame + 13;
+const cycleFrames = reviewFrame + 77;
 
 function renderLine(tokens: CodeToken[], visibleChars: number) {
   let remaining = visibleChars;
@@ -46,35 +46,91 @@ function renderLine(tokens: CodeToken[], visibleChars: number) {
   });
 }
 
-export function WorkspacePreview() {
+const CodeLine = memo(function CodeLine({ tokens, index, visibleChars, showCaret }: {
+  tokens: CodeToken[];
+  index: number;
+  visibleChars: number;
+  showCaret: boolean;
+}) {
+  return (
+    <div className="workspace-preview-code-line">
+      <span className="workspace-preview-line-number">{index + 1}</span>
+      <code>{renderLine(tokens, visibleChars)}{showCaret && <span className="workspace-preview-caret" />}</code>
+    </div>
+  );
+});
+
+function AnimatedCode({ onTerminalReady, onReviewReady }: {
+  onTerminalReady: (ready: boolean) => void;
+  onReviewReady: (ready: boolean) => void;
+}) {
   const [frame, setFrame] = useState(0);
+  const codeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
     let timer: ReturnType<typeof setInterval> | undefined;
+    let inView = false;
 
-    const updateMotion = () => {
+    const syncAnimation = () => {
       if (timer) clearInterval(timer);
       if (motionPreference.matches) {
         setFrame(reviewFrame);
-      } else {
-        setFrame(0);
-        timer = setInterval(() => setFrame((current) => (current + 1) % cycleFrames), 35);
+      } else if (inView && !document.hidden) {
+        timer = setInterval(() => setFrame((current) => (current + 1) % cycleFrames), 50);
       }
     };
 
-    updateMotion();
+    const updateMotion = () => {
+      setFrame(motionPreference.matches ? reviewFrame : 0);
+      syncAnimation();
+    };
+
+    const observer = new IntersectionObserver(([entry]) => {
+      inView = entry.isIntersecting;
+      syncAnimation();
+    });
+    if (codeRef.current) observer.observe(codeRef.current);
+
+    if (motionPreference.matches) setFrame(reviewFrame);
     motionPreference.addEventListener("change", updateMotion);
+    document.addEventListener("visibilitychange", syncAnimation);
     return () => {
       if (timer) clearInterval(timer);
+      observer.disconnect();
       motionPreference.removeEventListener("change", updateMotion);
+      document.removeEventListener("visibilitychange", syncAnimation);
     };
   }, []);
 
-  const visibleChars = Math.min(totalChars, frame * 2);
+  useEffect(() => {
+    if (frame === 0) {
+      onTerminalReady(false);
+      onReviewReady(false);
+    } else if (frame === terminalFrame) {
+      onTerminalReady(true);
+    } else if (frame === reviewFrame) {
+      onTerminalReady(true);
+      onReviewReady(true);
+    }
+  }, [frame, onTerminalReady, onReviewReady]);
+
+  const visibleChars = Math.min(totalChars, frame * 3);
   const activeLine = lineStarts.findLastIndex((start) => start <= visibleChars);
-  const terminalReady = frame >= terminalFrame;
-  const reviewReady = frame >= reviewFrame;
+
+  return (
+    <div className="workspace-preview-code" ref={codeRef} aria-hidden="true">
+      {codeLines.map((line, index) => {
+        const lineChars = Math.max(0, Math.min(lineLengths[index], visibleChars - lineStarts[index]));
+        return <CodeLine tokens={line} index={index} visibleChars={lineChars} showCaret={visibleChars < totalChars && activeLine === index} key={index} />;
+      })}
+    </div>
+  );
+}
+
+export function WorkspacePreview() {
+  const [terminalReady, setTerminalReady] = useState(false);
+  const [reviewReady, setReviewReady] = useState(false);
 
   return (
     <div className="workspace-preview" aria-label="Animated illustration of the Velo browser IDE">
@@ -97,17 +153,7 @@ export function WorkspacePreview() {
         <div className="workspace-preview-center">
           <div className="workspace-preview-tabs"><span><FileCode2 size={13} /> app.ts <span className="workspace-preview-tab-dot" /></span><span>styles.css</span></div>
           <div className="workspace-preview-breadcrumb">studio-site <span>/</span> src <span>/</span> app.ts</div>
-          <div className="workspace-preview-code" aria-hidden="true">
-            {codeLines.map((line, index) => {
-              const lineChars = Math.max(0, Math.min(lineLengths[index], visibleChars - lineStarts[index]));
-              return (
-                <div className="workspace-preview-code-line" key={index}>
-                  <span className="workspace-preview-line-number">{index + 1}</span>
-                  <code>{renderLine(line, lineChars)}{visibleChars < totalChars && activeLine === index && <span className="workspace-preview-caret" />}</code>
-                </div>
-              );
-            })}
-          </div>
+          <AnimatedCode onTerminalReady={setTerminalReady} onReviewReady={setReviewReady} />
           <div className="workspace-preview-terminal">
             <div className="workspace-preview-terminal-title"><Terminal size={12} /> TERMINAL <span>×</span></div>
             <div><span className="lp-orange">➜</span> studio-site <span className="lp-muted">npm run dev</span></div>
