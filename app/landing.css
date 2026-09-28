@@ -1,3 +1,8 @@
+html:has(.velo-landing) { scroll-behavior: smooth; }
+#workspace, #how-it-works { scroll-margin-top: 24px; }
+@media (prefers-reduced-motion: reduce) {
+  html:has(.velo-landing) { scroll-behavior: auto; }
+}
 .velo-landing {
   --landing-bg: #0c0907;
   --landing-cream: #f5eee4;
