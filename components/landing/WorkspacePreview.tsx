@@ -2,6 +2,8 @@
 
 import { memo, useEffect, useRef, useState } from "react";
 import {
+  ArrowLeft,
+  Bot,
   Check,
   ChevronDown,
   Code2,
@@ -10,6 +12,9 @@ import {
   GitBranch,
   PanelLeft,
   Play,
+  Save,
+  Settings,
+  Sparkles,
   Terminal,
   WandSparkles,
 } from "lucide-react";
@@ -17,15 +22,15 @@ import {
 type CodeToken = { text: string; color?: string };
 
 const codeLines: CodeToken[][] = [
-  [{ text: "const", color: "lp-purple" }, { text: " tasks = [" }, { text: '"Build UI"', color: "lp-green" }, { text: ", " }, { text: '"Review diff"', color: "lp-green" }, { text: "];" }],
+  [{ text: "const", color: "lp-purple" }, { text: " tasks = [" }, { text: '"Build UI"', color: "lp-string" }, { text: ", " }, { text: '"Review diff"', color: "lp-string" }, { text: "];" }],
   [],
   [{ text: "export function", color: "lp-purple" }, { text: " " }, { text: "renderTasks", color: "lp-yellow" }, { text: "() {" }],
-  [{ text: "  " }, { text: "const", color: "lp-purple" }, { text: " root = document." }, { text: "querySelector", color: "lp-yellow" }, { text: "(" }, { text: '"#app"', color: "lp-green" }, { text: ");" }],
+  [{ text: "  " }, { text: "const", color: "lp-purple" }, { text: " root = document." }, { text: "querySelector", color: "lp-yellow" }, { text: "(" }, { text: '"#app"', color: "lp-string" }, { text: ");" }],
   [{ text: "  " }, { text: "if", color: "lp-purple" }, { text: " (!root) " }, { text: "return", color: "lp-purple" }, { text: ";" }],
   [],
   [{ text: "  root.innerHTML = tasks" }],
-  [{ text: "    ." }, { text: "map", color: "lp-yellow" }, { text: "((task) => " }, { text: "`<li>${task}</li>`", color: "lp-green" }, { text: ")" }],
-  [{ text: "    ." }, { text: "join", color: "lp-yellow" }, { text: "(" }, { text: '""', color: "lp-green" }, { text: ");" }],
+  [{ text: "    ." }, { text: "map", color: "lp-yellow" }, { text: "((task) => " }, { text: "`<li>${task}</li>`", color: "lp-string" }, { text: ")" }],
+  [{ text: "    ." }, { text: "join", color: "lp-yellow" }, { text: "(" }, { text: '""', color: "lp-string" }, { text: ");" }],
   [{ text: "}" }],
 ];
 
@@ -135,9 +140,19 @@ export function WorkspacePreview() {
   return (
     <div className="workspace-preview" aria-label="Animated illustration of the Velo browser IDE">
       <div className="workspace-preview-topbar">
-        <div className="workspace-preview-brand"><span>V</span> velo</div>
-        <div className="workspace-preview-project"><Code2 size={13} /> studio-site <ChevronDown size={12} /></div>
-        <div className="workspace-preview-actions"><GitBranch size={13} /> main <span className="workspace-preview-run"><Play size={11} fill="currentColor" /> Run</span></div>
+        <div className="workspace-preview-project">
+          <ArrowLeft size={14} />
+          <span className="workspace-preview-sidebar-toggle"><PanelLeft size={14} /></span>
+          <Code2 size={13} />
+          <strong>studio-site</strong>
+          <span className="workspace-preview-language">TypeScript</span>
+        </div>
+        <div className="workspace-preview-actions">
+          <Save size={13} /><Terminal size={13} />
+          <span className="workspace-preview-ai-toggle"><Sparkles size={13} /></span>
+          <Bot size={13} /><GitBranch size={13} /><Settings size={13} />
+          <span className="workspace-preview-run"><Play size={11} fill="currentColor" /> Run</span>
+        </div>
       </div>
 
       <div className="workspace-preview-body">
@@ -156,7 +171,7 @@ export function WorkspacePreview() {
           <AnimatedCode onTerminalReady={setTerminalReady} onReviewReady={setReviewReady} />
           <div className="workspace-preview-terminal">
             <div className="workspace-preview-terminal-title"><Terminal size={12} /> TERMINAL <span>×</span></div>
-            <div><span className="lp-orange">➜</span> studio-site <span className="lp-muted">npm run dev</span></div>
+            <div><span className="lp-terminal-prompt">➜</span> studio-site <span className="lp-muted">npm run dev</span></div>
             <div className={`workspace-preview-reveal ${terminalReady ? "is-visible" : ""}`}><span className="lp-green">✓</span> Ready at <span className="lp-muted">localhost:3000</span></div>
           </div>
         </div>
@@ -170,7 +185,6 @@ export function WorkspacePreview() {
           <div className={`workspace-preview-agent-footer workspace-preview-reveal ${reviewReady ? "is-visible" : ""}`}>Review proposed changes <span>↗</span></div>
         </aside>
       </div>
-      <div className="workspace-preview-statusbar"><span><GitBranch size={11} /> main</span><span>TypeScript&nbsp; · &nbsp;UTF-8&nbsp; · &nbsp;Ln 4, Col 18</span></div>
     </div>
   );
 }
