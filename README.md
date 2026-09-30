@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🖥️ Velo Frontend
 
-## Getting Started
+The client-side web application for the **Velo** Cloud Development Environment. Built with **Next.js 16**, **React 19**, **Tailwind CSS v4**, and **TypeScript**.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## ⚡ Quick Start
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Prerequisites
+- **Node.js**: `v20.x` or higher
+- **Package Manager**: `npm` (or `pnpm`)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Installation & Setup
 
-## Learn More
+1. **Navigate to the frontend directory:**
+   ```bash
+   cd velo-frontend
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+2. **Set up your local environment file:**
+   Copy the provided `.env.example` template:
+   ```bash
+   cp .env.example .env.local
+   ```
+   *By default, `NEXT_PUBLIC_API_URL` points to `http://localhost:8080/api`.*
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+3. **Install dependencies:**
+   ```bash
+   npm install
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+4. **Launch the development server:**
+   ```bash
+   npm run dev
+   ```
+   Open **[http://localhost:3000](http://localhost:3000)** in your browser.
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🛠️ Available Scripts
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Command | Description |
+|---|---|
+| `npm run dev` | Runs the Next.js development server with Turbopack |
+| `npm run build` | Compiles and builds the production application |
+| `npm run start` | Starts the Next.js production server |
+| `npx tsc --noEmit` | Runs the TypeScript compiler to verify type safety |
+
+---
+
+## 🧩 Key Architecture
+
+- **`app/`**: Next.js App Router containing Authentication routes (`/login`, `/register`, `/forgot-password`), Dashboard, and IDE Workspace (`/project/[id]`).
+- **`components/ide/`**:
+  - **`IdeEditorArea.tsx`**: Monaco Editor instance with auto-save, cursor/selection tracking, and tab navigation.
+  - **`IdeTerminalArea.tsx`**: xterm.js terminal viewport with fit addon and ANSI color support.
+  - **`IdeAgentPanel.tsx`**: AI Agent control center with step progress indicators and diff reviewer.
+  - **`agent/AgentDiffViewer.tsx`**: Hunk-level diff visualization with interactive Accept/Reject toggles.
+  - **`agent/AgentProgressPanel.tsx`**: Real-time agent thought & execution phase stepper.
+- **`hooks/`**:
+  - **`useAgentSse.ts`**: Server-Sent Events hook managing streaming step updates, proposal sync, and auto-reconnection.
+  - **`useTerminalWebSocket.ts`**: WebSocket manager connecting xterm.js to the backend PTY shell.
+- **`store/`**:
+  - **`agentStore.ts`**: Zustand store managing agent run lifecycle, proposals, and optimistic hunk decisions.
+  - **`authStore.ts`**: Zustand store for user session and authentication status.
+- **`services/`**:
+  - **`api.ts`**: Axios instance with automatic response unwrapping and JWT refresh retry interceptor.
+  - **`agentService.ts`**: REST client for all agent runs, tools, proposals, and safe-apply endpoints.
