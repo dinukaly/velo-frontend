@@ -31,7 +31,7 @@ export interface IdeAgentPanelProps {
   selectedCode?: string;
   onClose: () => void;
   onSwitchToChat?: () => void;
-  onApplySuccess?: () => void;
+  onApplySuccess?: (result: ApplyResult) => void;
 }
 
 const STATUS_LABELS: Partial<Record<AgentRunStatus, string>> = {
@@ -200,10 +200,10 @@ export function IdeAgentPanel({
       setApplyResult(result);
       if (result.outcome === "SUCCESS") {
         toast.success(`✅ ${result.filesApplied} file(s) applied successfully!`);
-        onApplySuccess?.();
+        onApplySuccess?.(result);
       } else if (result.outcome === "PARTIAL") {
         toast.warning(`⚠️ Partial apply: ${result.filesApplied} succeeded, ${result.filesFailed} failed.`);
-        onApplySuccess?.();
+        onApplySuccess?.(result);
       } else if (result.outcome === "NOTHING_TO_APPLY") {
         toast.info("Nothing to apply — all changes were rejected.");
       } else {

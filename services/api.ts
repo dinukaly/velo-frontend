@@ -18,8 +18,52 @@ function isApiResponse(body: unknown): body is APIResponse {
     );
 }
 
+interface CsrfTokenResponse {
+    token: string;
+    headerName: string;
+}
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api";
+const SAFE_HTTP_METHODS = new Set(["get", "head", "options"]);
+
+const csrfClient = axios.create({
+    baseURL: API_BASE_URL,
+    withCredentials: true,
+    timeout: 30_000,
+});
+
+let csrfToken: string | null = null;
+let csrfHeaderName = "X-XSRF-TOKEN";
+let csrfRequest: Promise<void> | null = null;
+
+function isUnsafeMethod(method?: string) {
+    return !SAFE_HTTP_METHODS.has((method ?? "get").toLowerCase());
+}
+
+async function loadCsrfToken(): Promise<void> {
+    const response = await csrfClient.get<APIResponse<CsrfTokenResponse>>("/v1/auth/csrf");
+    const payload = isApiResponse(response.data) ? response.data.data : response.data;
+
+    csrfToken = payload.token;
+    csrfHeaderName = payload.headerName;
+}
+
+async function ensureCsrfToken(forceRefresh = false): Promise<void> {
+    if (forceRefresh) {
+        csrfToken = null;
+    }
+    if (csrfToken) return;
+
+    if (!csrfRequest) {
+        csrfRequest = loadCsrfToken().finally(() => {
+            csrfRequest = null;
+        });
+    }
+    await csrfRequest;
+}
+
 const api = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api",
+    baseURL: API_BASE_URL,
     headers: {
         "Content-Type": "application/json",
     },
@@ -29,6 +73,7 @@ const api = axios.create({
 
 export interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
     _retry?: boolean;
+    _csrfRetry?: boolean;
 }
 
 let isRefreshing = false;
@@ -57,6 +102,14 @@ function onRefreshed(token: string) {
     refreshSubscribers = [];
 }
 
+api.interceptors.request.use(async (config) => {
+    if (isUnsafeMethod(config.method)) {
+        await ensureCsrfToken();
+        config.headers.set(csrfHeaderName, csrfToken);
+    }
+    return config;
+});
+
 // Response Interceptor
 // 1. Unwraps the backend's APIResponse wrapper so every service receives the
 //    plain payload directly via `response.data`.
@@ -74,6 +127,18 @@ api.interceptors.response.use(
 
         if (!originalRequest) {
             return Promise.reject(error);
+        }
+
+        if (
+            error.response?.status === 403 &&
+            error.response.headers["x-csrf-error"] === "true" &&
+            isUnsafeMethod(originalRequest.method) &&
+            !originalRequest._csrfRetry
+        ) {
+            originalRequest._csrfRetry = true;
+            await ensureCsrfToken(true);
+            originalRequest.headers.set(csrfHeaderName, csrfToken);
+            return api(originalRequest);
         }
 
         // Auth endpoints should surface their own 401 payloads directly to the UI.

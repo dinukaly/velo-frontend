@@ -113,6 +113,24 @@ export function useAgentSse({ runId, enabled = true }: UseAgentSseOptions) {
         backoffRef.current = 1000; // reset back-off on successful connect
       };
 
+      // Old event histories are bounded server-side. Refresh the durable run state
+      // when a reconnect is too far behind or its history has expired.
+      es.addEventListener("replay.reset", () => {
+        getAgentRun(runId!)
+          .then(async (detail) => {
+            if (detail.status) {
+              updateRunStatus(detail.status);
+              latestStatusRef.current = detail.status;
+            }
+            detail.steps?.forEach((step) => upsertStep(step));
+            if (detail.status === "WAITING_FOR_APPROVAL") {
+              const currentProposal = await getProposal(runId!);
+              if (currentProposal) setProposal(currentProposal);
+            }
+          })
+          .catch((err) => console.warn("[SSE] Run refresh after replay reset failed:", err));
+      });
+
       es.onerror = () => {
         setSseConnected(false);
         es.close();

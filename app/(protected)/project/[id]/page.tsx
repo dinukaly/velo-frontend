@@ -468,17 +468,27 @@ export default function ProjectPage() {
                                 selectedCode={selectedCode}
                                 onClose={() => setAiOpen(false)}
                                 onSwitchToChat={() => setAiMode("chat")}
-                                onApplySuccess={() => {
+                                onApplySuccess={(result) => {
                                     setFileTreeVersion((v) => v + 1);
-                                    // Reload open tab contents after changes are applied
-                                    const tabsToReload = openTabs.filter((t) => t.tabType !== "diff");
+                                    const appliedPaths = new Set(
+                                        result.fileResults
+                                            .filter((file) => file.status === "APPLIED")
+                                            .map((file) => file.filePath)
+                                    );
+                                    if (openTabs.some((tab) => tab.isDirty && appliedPaths.has(tab.id))) {
+                                        toast.warning("An agent-changed file has unsaved editor edits. Its tab was not reloaded.");
+                                    }
+                                    const tabsToReload = openTabs.filter(
+                                        (tab) => tab.tabType !== "diff" && !tab.isDirty && appliedPaths.has(tab.id)
+                                    );
                                     tabsToReload.forEach(async (tab) => {
                                         try {
-                                            const content = await import("@/services/fileService")
-                                                .then((m) => m.loadFileContent(projectId, tab.id));
+                                            const content = await loadFileContent(projectId, tab.id);
                                             setOpenTabs((prev) =>
                                                 prev.map((t) =>
-                                                    t.id === tab.id ? { ...t, content, isDirty: false } : t
+                                                    t.id === tab.id && !t.isDirty
+                                                        ? { ...t, content, isDirty: false }
+                                                        : t
                                                 )
                                             );
                                         } catch {
